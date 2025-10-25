@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tio do Quiz - Gerador de Desafios com IA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    
+    <!-- PWA: Link para o Manifesto (caminho relativo) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af" />
+
+    <!-- CSS Personalizado -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-white">
+
+    <!-- Container de Tela Cheia -->
+    <div id="app-container">
+        <!-- Vídeo de Fundo Principal (ocupa a tela inteira) -->
+        <video id="background-video" loop muted playsinline class="hidden"></video>
+
+         <!-- Canvas para a gravação recortada (oculto) -->
+        <canvas id="cropping-canvas" class="hidden absolute top-0 left-0"></canvas>
+
+        <!-- Área de Jogo Proporcional 9:16 -->
+        <div id="game-area">
+            <!-- Cabeçalho Fixo do Usuário -->
+            <header id="user-header" class="game-header hidden">
+                <video id="header-background-video" loop muted playsinline class="hidden"></video>
+                <div id="header-content-wrapper">
+                    <div id="user-info-container" class="flex flex-col items-center justify-center h-full">
+                        <img id="user-logo" src="" alt="Logo do Usuário" class="object-contain">
+                        <h1 id="quiz-title" class="text-white drop-shadow-md truncate"></h1>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Conteúdo Principal do Quiz (Área de Rolagem) -->
+            <main id="main-content" class="main-screen hidden">
+                <h2 id="loading-message" class="text-3xl text-center text-yellow-400 hidden">Gerando seu quiz...</h2>
+                <div id="quiz-container" class="space-y-3"></div>
+            </main>
+
+            <!-- Telas de Overlay (Lobby, Personalização, Finalização) -->
+            <div id="personalization-modal" class="modal-overlay hidden">
+                <h1 class="text-5xl text-yellow-400 drop-shadow-lg">Personalização</h1>
+                
+                <h2 class="text-3xl text-blue-200 pt-4">Gerador de Conteúdo</h2>
+                <div class="bg-blue-900/50 p-4 rounded-lg space-y-3">
+                    <div class="space-y-2">
+                        <label for="question-count-input" class="block text-xl">Perguntas: <span id="question-count-value" class="text-yellow-400 font-bold">5</span></label>
+                        <input type="range" id="question-count-input" min="3" max="10" value="5" class="w-full">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="answer-count-input" class="block text-xl">Alternativas: <span id="answer-count-value" class="text-yellow-400 font-bold">3</span></label>
+                        <input type="range" id="answer-count-input" min="2" max="5" value="3" class="w-full">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="difficulty-input" class="block text-xl mb-1">Nível de Dificuldade</label>
+                        <select id="difficulty-input" class="input-field w-full">
+                            <option value="Fácil">Fácil</option>
+                            <option value="Médio" selected>Médio</option>
+                            <option value="Difícil">Difícil</option>
+                            <option value="Impossível">Impossível</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="quiz-theme-input" class="block text-xl mb-1">Qual o tema?</label>
+                        <input type="text" id="quiz-theme-input" class="input-field" placeholder="Ex: Curiosidades do Mundo">
+                    </div>
+                    <button id="generate-content-btn" class="main-button bg-purple-600 hover:bg-purple-700 w-full">
+                        ✨ Gerar Quiz e Roteiro
+                    </button>
+                    <div id="generation-output" class="hidden text-center space-y-2">
+                        <p id="generation-success-msg" class="text-green-300 text-xl"></p>
+                        <button id="download-script-btn" class="main-button bg-yellow-500 hover:bg-yellow-600 text-blue-900 text-lg py-1 w-full">
+                            📝 Baixar Roteiro (.txt)
+                        </button>
+                    </div>
+                </div>
+
+                <button id="save-settings-btn" class="main-button bg-blue-600 hover:bg-blue-700 w-full mt-4">
+                    ✅ Salvar e Voltar ao Lobby
+                </button>
+            </div>
+
+            <div id="lobby-modal" class="modal-overlay hidden">
+                <div>
+                    <h1 class="text-6xl text-yellow-400 drop-shadow-lg">Tio do Quiz</h1>
+                    <p class="text-2xl text-blue-200">Pronto para o desafio?</p>
+                </div>
+
+                <div class="flex-grow flex flex-col justify-center gap-4">
+                    <div class="pt-2">
+                        <h2 class="text-2xl text-blue-200 mb-2">Temas Recentes</h2>
+                        <div id="recent-themes-container" class="flex flex-wrap gap-2 justify-center"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 justify-center">
+                    <button id="start-btn" class="main-button bg-green-600 hover:bg-green-700">
+                        ▶️ Iniciar Jogo
+                    </button>
+                     <button id="record-btn" class="main-button bg-red-600 hover:bg-red-700">
+                        🔴 Iniciar Gravando
+                    </button>
+                    <button id="personalize-btn" class="main-button bg-yellow-500 hover:bg-yellow-600 text-blue-900">
+                        ⚙️ Personalizar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nova Tela de Pre-Game -->
+            <div id="pre-game-modal" class="modal-overlay hidden">
+                <div class="flex flex-col items-center justify-between h-full py-16">
+                    <p id="pre-game-text-top" class="text-4xl text-yellow-400 drop-shadow-lg">PRONTO PARA O DESAFIO?</p>
+                    <img id="pre-game-logo" src="" alt="Sua Logo" class="max-w-[70%] rounded-lg">
+                    <p id="pre-game-text-bottom" class="text-4xl text-white drop-shadow-md">DUVIDO VOCÊ ACERTAR</p>
+                </div>
+            </div>
+
+            <div id="finalization-modal" class="modal-overlay hidden">
+                <div class="flex flex-col items-center justify-center h-full gap-8">
+                    <img id="final-logo" src="" alt="Sua Logo" class="max-w-[70%] rounded-lg">
+                    <div id="final-cta" class="text-center space-y-4">
+                        <!-- Texto será preenchido pelo áudio/lógica -->
+                    </div>
+                </div>
+            </div>
+        </div> 
+
+        <!-- Controles Externos -->
+        <div id="external-controls" class="hidden items-center justify-center gap-4 mt-4">
+            <div id="download-container"></div>
+        </div>
+    </div>
+    
+    <audio id="sound-tick" src="./files/tick.mp3" preload="auto"></audio>
+    <audio id="sound-correct" src="./files/correct.mp3" preload="auto"></audio>
+    <!-- <audio id="sound-final" src="./files/final.mp3" preload="auto"></audio> --> <!-- Removido pois o CTA agora é dinâmico -->
+
+    <script type="module" src="script.js"></script>
+    <!-- PWA: Script para registrar o Service Worker (caminho relativo) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('Service Worker registrado com sucesso:', registration))
+                    .catch(error => console.log('Falha ao registrar o Service Worker:', error));
+            });
+        }
+    </script>
+</body>
+</html>
+
