@@ -128,7 +128,7 @@ export function initConstants() {
 
     soundTick = document.getElementById('sound-tick');
     soundCorrect = document.getElementById('sound-correct');
-    // soundFinal = document.getElementById('sound-final'); // Este elemento não existe mais
+    soundFinal = document.getElementById('sound-final');
 }
 
 
@@ -141,12 +141,12 @@ export const DEFAULT_LOGO_SIZE = '200'; // px
 export let downloadTimeoutId = null;
 
 // --- SUPABASE CLIENT (INICIALIZAÇÃO ÚNICA) ---
-// ** VOCÊ PRECISA ATUALIZAR ESTAS CHAVES COM AS SUAS **
-// (Encontre em Settings -> API no painel do Supabase)
-const SUPABASE_URL = 'https://zqqyuvzlhjceqztghxex.supabase.co'; // CORREÇÃO: Usar a URL base do projeto
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk1NDQxMTMsImV4cCI6MjA0NTExMDExM30.bJGtI7oG_uU-k0wv9wY0E-EaxjSg23t-jrtbT-vJz-4'; // CORREÇÃO: Chave Anon pública correta
+// Estas são as chaves PÚBLICAS do seu projeto Supabase.
+// Encontre em Settings -> API.
+const SUPABASE_URL = 'https://zqqyuvzlhjceqztghxex.supabase.co'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk1NDQxMTMsImV4cCI6MjA0NTExMDExM30.bJGtI7oG_uU-k0wv9wY0E-EaxjSg23t-jrtbT-vJz-4';
 
 // Acessa a variável global 'supabase' (carregada via script tag no index.html)
 const { createClient } = supabase; 
-// CORREÇÃO: Inicializa o cliente Supabase com as chaves PÚBLICAS
+// Inicializa o cliente Supabase
 export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

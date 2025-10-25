@@ -1,24 +1,24 @@
 // --- IMPORTAÇÕES DOS MÓDULOS ---
 import * as C from './constants.js';
-// CORREÇÃO: Importa a nova função 'initConstants'
 import { initConstants } from './constants.js'; 
 import { settings, loadSettings, saveSettings, supabase, checkAuth } from './state.js';
-import { showScreen, handleBackButton, updateWelcomeMessage } from './ui.js';
+import { showScreen, handleBackButton, updateWelcomeMessage, loadKeysIntoList } from './ui.js';
 import { startGame } from './game.js';
 import { handleGenerateContentClick, handleDownloadScriptClick, handleSaveKeyClick } from './api.js';
 import { stopRecordingAndDownload } from './recording.js'; 
 
 // --- LÓGICA DE NAVEGAÇÃO E INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // CORREÇÃO: Inicializa todas as constantes de elementos primeiro
+    // 1. Inicializa todas as constantes de elementos (DEVE ser a primeira coisa a acontecer)
     initConstants(); 
     
+    // 2. Carrega as configurações do localStorage
     loadSettings();
     
+    // 3. Adiciona listeners globais
     window.addEventListener('popstate', handleBackButton);
     
     document.addEventListener('fullscreenchange', () => {
-        // Importa o estado de gravação dinamicamente
         import('./state.js').then(state => {
             if (!document.fullscreenElement && state.isRecording) {
                 console.warn("Fullscreen encerrado durante a gravação. Parando gravação.");
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
     
-    // Verifica se o usuário já está logado no Supabase
+    // 4. Verifica o estado de autenticação
     const user = await checkAuth();
     if (user) {
         console.log("Usuário já autenticado:", user.email);
@@ -38,10 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         showScreen('login');
     }
 
-    // --- EVENT LISTENERS GERAIS (MOVIMOS PARA DENTRO DO DOMCONTENTLOADED) ---
+    // 5. Conecta Event Listeners
     C.personalizeBtn.addEventListener('click', () => {
         // Carrega a lista de chaves do DB ao abrir a personalização
-        import('./ui.js').then(ui => ui.loadKeysIntoList()); 
+        loadKeysIntoList(); 
         showScreen('personalization');
     });
 
@@ -58,9 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         C.answerCountValue.textContent = e.target.value;
     });
 
-    C.startBtn.addEventListener('click', () => startGame(false)); // Iniciar sem gravar
-    C.recordBtn.addEventListener('click', () => startGame(true)); // Iniciar gravando
-    C.stopRecordBtn.addEventListener('click', stopRecordingAndDownload); // Parar gravação
+    C.startBtn.addEventListener('click', () => startGame(false)); 
+    C.recordBtn.addEventListener('click', () => startGame(true)); 
+    C.stopRecordBtn.addEventListener('click', stopRecordingAndDownload); 
 
     C.generateContentBtn.addEventListener('click', handleGenerateContentClick);
     C.downloadScriptBtn.addEventListener('click', handleDownloadScriptClick);
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         C.loginError.classList.add('hidden');
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
@@ -83,14 +83,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw error;
             }
 
-            console.log("Login bem-sucedido:", data.user.email);
-            updateWelcomeMessage(data.user.email);
+            const { data: { user } } = await supabase.auth.getUser(); // Pega o usuário após o login
+            
+            console.log("Login bem-sucedido:", user.email);
+            updateWelcomeMessage(user.email);
             showScreen('lobby');
             C.passwordInput.value = ''; 
 
         } catch (error) {
             console.error("Erro no login:", error.message);
-            C.loginError.textContent = "E-mail ou senha incorretos.";
+            C.loginError.textContent = "E-mail ou senha incorretos. Verifique as credenciais e o painel Supabase.";
             C.loginError.classList.remove('hidden');
         } finally {
             C.loginBtn.disabled = false;
@@ -110,4 +112,3 @@ document.addEventListener('DOMContentLoaded', async () => {
         showScreen('login');
     });
 });
-
