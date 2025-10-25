@@ -105,11 +105,13 @@ export async function startGame(withRecording = false) {
     // 2. Tenta entrar em fullscreen (agora a gravação já está ativa, se solicitada)
     await requestFullscreen();
 
-    // 3. Define a fonte dos vídeos
+    // 3. CORREÇÃO: Define a fonte dos vídeos ANTES de mostrar a tela de pré-jogo
     C.backgroundVideo.src = C.DEFAULT_VIDEO_URL;
     C.headerBackgroundVideo.src = C.DEFAULT_VIDEO_URL;
+    C.backgroundVideo.load();
+    C.headerBackgroundVideo.load();
 
-    // 4. Inicia a tela de pré-jogo
+    // 4. Inicia a tela de pré-jogo (que agora é a tela de loading)
     proceedToPreGame();
 }
 
@@ -117,6 +119,46 @@ export async function startGame(withRecording = false) {
 const proceedToPreGame = async () => {
     showScreen('pre-game');
     document.getElementById('pre-game-logo').src = C.DEFAULT_LOGO_URL;
+
+    // Mostra o loading e esconde o conteúdo
+    C.preGameLoading.classList.remove('hidden');
+    C.preGameContent.classList.add('hidden');
+    
+    // Cria as duas promessas
+    const preGameTimer = new Promise(res => setTimeout(res, 5000)); // Tempo mínimo de 5s
+    
+    // --- CORREÇÃO DO BUG DE CARREGAMENTO ---
+    const videoLoad = new Promise((resolve) => {
+        // Verifica se o vídeo JÁ ESTÁ pronto (ex: cacheado)
+        // readyState 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
+        if (C.backgroundVideo.readyState >= 3) {
+            console.log("Vídeo já estava pronto (cache).");
+            resolve();
+            return;
+        }
+        
+        // Se não estava pronto, espera o evento
+        C.backgroundVideo.oncanplaythrough = () => {
+            console.log("Vídeo carregado (oncanplaythrough).");
+            resolve();
+        };
+        
+        // Adiciona um listener de erro para não travar o app
+        C.backgroundVideo.onerror = () => {
+            console.error("Erro ao carregar o vídeo de fundo. Continuando mesmo assim.");
+            resolve(); // Resolve mesmo em caso de erro para não travar
+        };
+    });
+
+    console.log("Aguardando timer (5s) e carregamento do vídeo...");
+    // Espera o tempo MÍNIMO e o vídeo estarem prontos
+    await Promise.all([preGameTimer, videoLoad]);
+    console.log("Timer e vídeo prontos!");
+
+    // Esconde o loading e mostra o conteúdo "PRONTO PARA O DESAFIO?"
+    C.preGameLoading.classList.add('hidden');
+    C.preGameContent.classList.remove('hidden');
+    C.preGameContent.classList.add('flex'); // Garante que o flex seja aplicado
 
     // AJUSTE: Adiciona delay de 300ms antes da narração de boas-vindas
     await new Promise(resolve => setTimeout(resolve, 300));

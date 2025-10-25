@@ -15,6 +15,9 @@ export const lobbyModal = document.getElementById('lobby-modal');
 export const mainContent = document.getElementById('main-content');
 export const finalizationModal = document.getElementById('finalization-modal');
 export const preGameModal = document.getElementById('pre-game-modal');
+export const preGameContent = document.getElementById('pre-game-content'); // NOVO
+export const preGameLoading = document.getElementById('pre-game-loading'); // NOVO
+
 
 // --- INPUTS DE PERSONALIZAÇÃO ---
 export const themeInput = document.getElementById('quiz-theme-input');
@@ -38,7 +41,6 @@ export const startBtn = document.getElementById('start-btn');
 export const recordBtn = document.getElementById('record-btn');
 export const externalControls = document.getElementById('external-controls');
 export const downloadContainer = document.getElementById('download-container');
-// export const stopRecordBtn = document.getElementById('stop-record-btn'); // Removido
 
 
 // --- ELEMENTOS DO QUIZ ---

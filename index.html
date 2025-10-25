@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     
-    <!-- PWA: Link para o Manifesto (caminho relativo) -->
+    <!-- PWA: Link para o Manifesto -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e40af" />
 
@@ -23,7 +23,7 @@
     <!-- Container de Tela Cheia -->
     <div id="app-container">
         <!-- Vídeo de Fundo Principal (ocupa a tela inteira) -->
-        <video id="background-video" loop muted playsinline class="hidden"></video>
+        <video id="background-video" loop muted playsinline class="hidden" preload="auto"></video>
 
          <!-- Canvas para a gravação recortada (oculto) -->
         <canvas id="cropping-canvas" class="hidden absolute top-0 left-0"></canvas>
@@ -32,7 +32,7 @@
         <div id="game-area">
             <!-- Cabeçalho Fixo do Usuário -->
             <header id="user-header" class="game-header hidden">
-                <video id="header-background-video" loop muted playsinline class="hidden"></video>
+                <video id="header-background-video" loop muted playsinline class="hidden" preload="auto"></video>
                 <div id="header-content-wrapper">
                     <div id="user-info-container" class="flex flex-col items-center justify-center h-full">
                         <img id="user-logo" src="" alt="Logo do Usuário" class="object-contain">
@@ -118,18 +118,26 @@
 
             <!-- Nova Tela de Pre-Game -->
             <div id="pre-game-modal" class="modal-overlay hidden">
-                <div class="flex flex-col items-center justify-between h-full py-16">
+                <!-- Conteúdo Padrão (oculto inicialmente) -->
+                <div id="pre-game-content" class="flex flex-col items-center justify-between h-full py-16 hidden">
                     <p id="pre-game-text-top" class="text-4xl text-yellow-400 drop-shadow-lg">PRONTO PARA O DESAFIO?</p>
                     <img id="pre-game-logo" src="" alt="Sua Logo" class="max-w-[70%] rounded-lg">
                     <p id="pre-game-text-bottom" class="text-4xl text-white drop-shadow-md">DUVIDO VOCÊ ACERTAR</p>
+                </div>
+                <!-- Tela de Carregamento (visível inicialmente) -->
+                <div id="pre-game-loading" class="flex flex-col items-center justify-center h-full gap-4">
+                    <p class="text-3xl text-yellow-400 drop-shadow-lg">Carregando o quiz...</p>
+                    <div class="w-12 h-12 border-4 border-t-yellow-400 border-white/20 rounded-full animate-spin"></div>
                 </div>
             </div>
 
             <div id="finalization-modal" class="modal-overlay hidden">
                 <div class="flex flex-col items-center justify-center h-full gap-8">
                     <img id="final-logo" src="" alt="Sua Logo" class="max-w-[70%] rounded-lg">
+                    <!-- CORREÇÃO: O texto do CTA foi re-adicionado aqui -->
                     <div id="final-cta" class="text-center space-y-4">
-                        <!-- Texto será preenchido pelo áudio/lógica -->
+                        <p class="text-4xl text-yellow-400 drop-shadow-lg">Gostou do Desafio?</p>
+                        <p class="text-3xl text-white drop-shadow-md">Siga, curta, comente e compartilhe!</p>
                     </div>
                 </div>
             </div>
@@ -143,10 +151,9 @@
     
     <audio id="sound-tick" src="./files/tick.mp3" preload="auto"></audio>
     <audio id="sound-correct" src="./files/correct.mp3" preload="auto"></audio>
-    <!-- <audio id="sound-final" src="./files/final.mp3" preload="auto"></audio> --> <!-- Removido pois o CTA agora é dinâmico -->
+    <!-- <audio id="sound-final" src="./files/final.mp3" preload="auto"></audio> --> <!-- Removido, CTA é dinâmico -->
 
     <script type="module" src="script.js"></script>
-    <!-- PWA: Script para registrar o Service Worker (caminho relativo) -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
