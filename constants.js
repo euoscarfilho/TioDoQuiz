@@ -143,9 +143,10 @@ export let downloadTimeoutId = null;
 // --- SUPABASE CLIENT (INICIALIZAÇÃO ÚNICA) ---
 // ** VOCÊ PRECISA ATUALIZAR ESTAS CHAVES COM AS SUAS **
 // (Encontre em Settings -> API no painel do Supabase)
-const SUPABASE_URL = 'https://zqqyuvzlhjceqztghxex.supabase.co/functions/v1/gerarQuiz'; // Ex: https://zqqyuvzlhjceqztghxex.supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzNTY5NjAsImV4cCI6MjA3NjkzMjk2MH0.jRAtYBZjuy6GHxHFM5cyyHythqBeLZiUeidjBX6nZno'; // Ex: eyJhbGciOiJIUzI1NiI...
+const SUPABASE_URL = 'https://zqqyuvzlhjceqztghxex.supabase.co'; // CORREÇÃO: Usar a URL base do projeto
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk1NDQxMTMsImV4cCI6MjA0NTExMDExM30.bJGtI7oG_uU-k0wv9wY0E-EaxjSg23t-jrtbT-vJz-4'; // CORREÇÃO: Chave Anon pública correta
 
-// Corrigido para garantir que o Supabase só seja inicializado APÓS a definição das chaves
-const { createClient } = supabase;
+// Acessa a variável global 'supabase' (carregada via script tag no index.html)
+const { createClient } = supabase; 
+// CORREÇÃO: Inicializa o cliente Supabase com as chaves PÚBLICAS
 export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
