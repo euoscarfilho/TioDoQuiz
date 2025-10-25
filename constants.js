@@ -141,10 +141,10 @@ export const DEFAULT_LOGO_SIZE = '200'; // px
 export let downloadTimeoutId = null;
 
 // --- SUPABASE CLIENT (INICIALIZAÇÃO ÚNICA) ---
-// Estas são as chaves PÚBLICAS do seu projeto Supabase.
-// Encontre em Settings -> API.
+// ** ATUALIZE ESTAS CHAVES COM AS SUAS DO SEU PROJETO **
+// (Encontre em Settings -> API no painel do Supabase)
 const SUPABASE_URL = 'https://zqqyuvzlhjceqztghxex.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjk1NDQxMTMsImV4cCI6MjA0NTExMDExM30.bJGtI7oG_uU-k0wv9wY0E-EaxjSg23t-jrtbT-vJz-4';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxcXl1dnpsaGpjZXF6dGdoeGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzNTY5NjAsImV4cCI6MjA3NjkzMjk2MH0.jRAtYBZjuy6GHxHFM5cyyHythqBeLZiUeidjBX6nZno'; 
 
 // Acessa a variável global 'supabase' (carregada via script tag no index.html)
 const { createClient } = supabase; 
