@@ -15,9 +15,9 @@ export const lobbyModal = document.getElementById('lobby-modal');
 export const mainContent = document.getElementById('main-content');
 export const finalizationModal = document.getElementById('finalization-modal');
 export const preGameModal = document.getElementById('pre-game-modal');
-export const preGameContent = document.getElementById('pre-game-content'); // NOVO
-export const preGameLoading = document.getElementById('pre-game-loading'); // NOVO
-
+export const preGameContent = document.getElementById('pre-game-content');
+export const preGameLoading = document.getElementById('pre-game-loading');
+// export const loginModal = document.getElementById('login-modal'); // Removido
 
 // --- INPUTS DE PERSONALIZAÇÃO ---
 export const themeInput = document.getElementById('quiz-theme-input');
@@ -27,6 +27,8 @@ export const difficultyInput = document.getElementById('difficulty-input');
 export const questionCountValue = document.getElementById('question-count-value');
 export const answerCountValue = document.getElementById('answer-count-value');
 export const recentThemesContainer = document.getElementById('recent-themes-container');
+export const googleApiKeyInput = document.getElementById('google-api-key'); // NOVO
+export const elevenLabsApiKeyInput = document.getElementById('elevenlabs-api-key'); // NOVO
 
 // --- BOTÕES DE GERAÇÃO DE CONTEÚDO ---
 export const generateContentBtn = document.getElementById('generate-content-btn');
@@ -38,9 +40,12 @@ export const downloadScriptBtn = document.getElementById('download-script-btn');
 export const saveSettingsBtn = document.getElementById('save-settings-btn');
 export const personalizeBtn = document.getElementById('personalize-btn');
 export const startBtn = document.getElementById('start-btn');
-export const recordBtn = document.getElementById('record-btn');
-export const externalControls = document.getElementById('external-controls');
-export const downloadContainer = document.getElementById('download-container');
+// export const recordBtn = document.getElementById('record-btn'); // Removido
+// export const externalControls = document.getElementById('external-controls'); // Removido
+// export const downloadContainer = document.getElementById('download-container'); // Removido
+// export const loginBtn = document.getElementById('login-btn'); // Removido
+// export const loginError = document.getElementById('login-error'); // Removido
+// export const passwordInput = document.getElementById('password-input'); // Removido
 
 
 // --- ELEMENTOS DO QUIZ ---
@@ -50,7 +55,7 @@ export const loadingMessage = document.getElementById('loading-message');
 // --- EFEITOS SONOROS (ELEMENTOS DE ÁUDIO) ---
 export const soundTick = document.getElementById('sound-tick');
 export const soundCorrect = document.getElementById('sound-correct');
-// export const soundFinal = document.getElementById('sound-final'); // Removido, será dinâmico
+// export const soundFinal = document.getElementById('sound-final'); // Removido, CTA é dinâmico
 
 // --- CONSTANTES DE PADRÃO ---
 export const DEFAULT_LOGO_URL = './files/logo.png';

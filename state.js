@@ -1,16 +1,19 @@
 // --- ESTADO DA APLICAÇÃO E CONFIGURAÇÕES ---
 export let settings = {};
-export let isRecording = false; // Flag para controlar o estado da gravação
+// export let isRecording = false; // Removido
 
-export function setRecordingState(value) {
-    console.log("Estado de gravação alterado para:", value);
-    isRecording = value;
-}
+// export function setRecordingState(value) { // Removido
+//     isRecording = value;
+// }
+
+// export function checkPassword(password) { // Removido
+//     return password === MASTER_PASSWORD;
+// }
 
 export function saveSettings() {
     const generatedQuiz = settings.generatedQuiz;
     const generatedScript = settings.generatedScript;
-    const generatedAudioMap = settings.generatedAudioMap; // Preserva os áudios
+    const generatedAudioMap = settings.generatedAudioMap;
 
     settings = {
         theme: document.getElementById('quiz-theme-input').value.trim(),
@@ -19,7 +22,11 @@ export function saveSettings() {
         difficulty: document.getElementById('difficulty-input').value,
         generatedQuiz: generatedQuiz,
         generatedScript: generatedScript,
-        generatedAudioMap: generatedAudioMap, // Salva os áudios
+        generatedAudioMap: generatedAudioMap,
+        
+        // Salva as chaves de API no localStorage
+        googleApiKey: document.getElementById('google-api-key').value.trim(),
+        elevenLabsApiKey: document.getElementById('elevenlabs-api-key').value.trim()
     };
     localStorage.setItem('tioDoQuizSettings', JSON.stringify(settings));
     updateUIFromSettings();
@@ -42,19 +49,25 @@ export function loadSettings() {
             difficulty: 'Médio',
             generatedQuiz: null,
             generatedScript: null,
-            generatedAudioMap: null, // Novo estado
+            generatedAudioMap: null,
+            googleApiKey: '',
+            elevenLabsApiKey: ''
         };
     }
     updateUIFromSettings();
 }
 
 export function updateUIFromSettings() {
-    document.getElementById('quiz-theme-input').value = settings.theme || ''; // Garante que não seja null
+    document.getElementById('quiz-theme-input').value = settings.theme || '';
     document.getElementById('question-count-input').value = settings.numQuestions || '5';
     document.getElementById('question-count-value').textContent = settings.numQuestions || '5';
     document.getElementById('answer-count-input').value = settings.numAnswers || '3';
     document.getElementById('answer-count-value').textContent = settings.numAnswers || '3';
     document.getElementById('difficulty-input').value = settings.difficulty || 'Médio';
+
+    // Carrega as chaves salvas nos campos de personalização
+    document.getElementById('google-api-key').value = settings.googleApiKey || '';
+    document.getElementById('elevenlabs-api-key').value = settings.elevenLabsApiKey || '';
 
     document.getElementById('user-logo').src = './files/logo.png';
     document.getElementById('user-logo').onerror = () => { document.getElementById('user-logo').src = 'https://placehold.co/200x200/f59e0b/1e3a8a?text=Erro'; };
@@ -71,7 +84,6 @@ export function saveRecentTheme(theme) {
     localStorage.setItem('tioDoQuizRecentThemes', JSON.stringify(recentThemes));
 }
 
-// CORREÇÃO: A função agora aceita um callback para o clique
 export function loadAndRenderRecentThemes(onThemeClickCallback) {
     const recentThemes = JSON.parse(localStorage.getItem('tioDoQuizRecentThemes')) || [];
     const recentThemesContainer = document.getElementById('recent-themes-container');
@@ -86,7 +98,6 @@ export function loadAndRenderRecentThemes(onThemeClickCallback) {
         themeBtn.textContent = theme;
         themeBtn.onclick = () => {
             document.getElementById('quiz-theme-input').value = theme;
-            // Executa o callback (que é a função 'showScreen')
             if (onThemeClickCallback) {
                 onThemeClickCallback('personalization');
             }

@@ -76,7 +76,7 @@ body {
 
 /* Cabeçalho Fixo do Quiz */
 .game-header {
-    height: 18rem; /* Aumentado para 18rem (para caber a logo de 200px + título) */
+    height: 18rem;
     width: 100%;
     overflow: hidden;
     position: relative;
@@ -104,6 +104,19 @@ body {
 #finalization-modal, #pre-game-modal {
     background-color: transparent;
     justify-content: center;
+}
+
+/* Nova Seção de Chaves de API */
+.api-key-section {
+    background-color: rgba(0,0,0,0.2);
+    border: 1px solid #2563eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 /* Vídeo de fundo específico para o cabeçalho */
@@ -135,7 +148,7 @@ body {
 }
 
 #user-logo {
-    /* height: 120px !important; */ /* Regra de altura conflitante removida */
+    /* height: 120px !important; */ /* Conflito removido */
     width: auto;
     flex-shrink: 0;
 }
@@ -156,6 +169,13 @@ body {
     font-family: 'Bangers', cursive;
     letter-spacing: 1.5px;
 }
+/* Específico para campos de senha */
+input[type="password"] {
+    font-family: sans-serif;
+    letter-spacing: normal;
+    font-size: 0.875rem;
+}
+
 
 /* Botão Principal */
 .main-button {
@@ -235,24 +255,7 @@ input[type="range"]::-moz-range-thumb {
     transition: all 0.3s ease-in-out;
 }
 
-/* Controles Externos */
-#external-controls {
-    position: absolute;
-    bottom: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-}
-.external-button, #download-container a {
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.2s;
-}
-.external-button:hover, #download-container a:hover {
-    transform: scale(1.05);
-}
+/* Controles Externos (Removido) */
 
 
 /* Estilos para a lista de temas recentes */

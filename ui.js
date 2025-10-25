@@ -1,6 +1,6 @@
 import * as C from './constants.js';
-import { loadAndRenderRecentThemes, isRecording, settings } from './state.js';
-import { forceStopRecording, stopRecordingAndDownload } from './recording.js'; 
+import { loadAndRenderRecentThemes, settings } from './state.js';
+// Funções de gravação removidas das importações
 
 // --- LÓGICA DE NAVEGAÇÃO E INICIALIZAÇÃO ---
 
@@ -33,9 +33,6 @@ export function showScreen(screenName) {
 
     C.mainContent.classList.add('hidden');
     C.userHeader.classList.add('hidden');
-    C.externalControls.classList.add('hidden'); // Esconde por padrão
-    C.downloadContainer.innerHTML = ''; // Limpa download link
-    clearTimeout(C.downloadTimeoutId); // Cancela timeout anterior
 
     if (!C.backgroundVideo.paused) C.backgroundVideo.pause();
     if (!C.headerBackgroundVideo.paused) C.headerBackgroundVideo.pause();
@@ -61,18 +58,12 @@ export function showScreen(screenName) {
     if (screenName === 'lobby') {
         C.lobbyModal.classList.remove('hidden');
         loadAndRenderRecentThemes(showScreen); // Passa o callback
-        forceStopRecording(); // Garante que qualquer gravação seja parada ao voltar ao lobby
     } else if (screenName === 'personalization') {
         C.personalizationModal.classList.remove('hidden');
     } else if (screenName === 'quiz') {
         C.mainContent.classList.remove('hidden');
         C.userHeader.classList.remove('hidden');
         
-        if (isRecording) {
-            C.externalControls.classList.remove('hidden');
-            C.downloadContainer.innerHTML = ''; 
-        }
-
         if (C.headerBackgroundVideo.src) {
             C.headerBackgroundVideo.classList.remove('hidden');
             C.headerBackgroundVideo.currentTime = C.backgroundVideo.currentTime; // Sincroniza
@@ -82,30 +73,9 @@ export function showScreen(screenName) {
         C.finalizationModal.classList.remove('hidden');
         
         const startFinalSequence = async () => {
-            // Toca o som de vitória primeiro
-            // C.soundFinal.play()... // O som "final" agora é o áudio do CTA
-            
-            // AJUSTE: Adiciona delay de 300ms antes da narração do CTA
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
             // Toca o áudio do CTA
             if (settings.generatedAudioMap && settings.generatedAudioMap['cta_final']) {
                 await playAudioAndWait(settings.generatedAudioMap['cta_final']);
-            }
-            
-            // Se estava gravando, mostra o botão após 1 segundo do fim do áudio
-            if (isRecording) {
-                C.downloadContainer.innerHTML = ''; 
-                C.externalControls.classList.remove('hidden'); 
-                
-                C.downloadTimeoutId = setTimeout(() => {
-                    const saveBtn = document.createElement('button');
-                    saveBtn.textContent = 'Parar e Salvar Gravação';
-                    saveBtn.className = 'external-button bg-green-600 hover:bg-green-700';
-                    saveBtn.onclick = stopRecordingAndDownload; 
-                    
-                    C.downloadContainer.appendChild(saveBtn);
-                }, 1000); // 1 segundo
             }
         };
         
