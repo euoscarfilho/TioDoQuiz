@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tio-do-quiz-cache-v4'; // Aumentei a versão para forçar a atualização
+const CACHE_NAME = 'tio-do-quiz-cache-v5'; // Versão do cache atualizada
 // Lista de arquivos para armazenar em cache para funcionamento offline.
 const urlsToCache = [
   '.', // Adiciona o diretório raiz
@@ -11,11 +11,8 @@ const urlsToCache = [
   'game.js',
   'api.js',
   'recording.js',
+  // REMOVEMOS os arquivos de mídia pesados (mp4, mp3) do cache
   'files/logo.png',
-  'files/BG.mp4',
-  'files/tick.mp3',
-  'files/correct.mp3',
-  'files/final.mp3',
   'files/icon-192.png',
   'files/icon-512.png',
   'manifest.json'
@@ -62,9 +59,16 @@ self.addEventListener('activate', event => {
 
 // Evento de Fetch: Serve os arquivos do cache primeiro, se disponíveis.
 self.addEventListener('fetch', event => {
-  // Ignora requisições para a API Gemini (ou outras APIs externas)
-  if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('api.elevenlabs.io')) {
-    return fetch(event.request);
+  
+  // CORREÇÃO: Ignora APIs externas e arquivos de mídia (streaming)
+  const url = event.request.url;
+  if (
+    url.includes('generativelanguage.googleapis.com') || 
+    url.includes('api.elevenlabs.io') ||
+    url.includes('.mp4') ||
+    url.includes('.mp3')
+  ) {
+    return fetch(event.request); // Deixa o navegador lidar com isso
   }
 
   event.respondWith(
@@ -74,8 +78,27 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        // Senão, busca na rede.
-        return fetch(event.request);
+        
+        // Senão, busca na rede, clona e salva no cache
+        return fetch(event.request).then(
+          (networkResponse) => {
+            // Verifica se a resposta é válida
+            if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+              return networkResponse;
+            }
+
+            // Clona a resposta. Um stream só pode ser consumido uma vez.
+            // Precisamos de um clone para o cache e outro para o navegador.
+            const responseToCache = networkResponse.clone();
+
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+
+            return networkResponse;
+          }
+        );
       })
   );
 });

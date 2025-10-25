@@ -106,6 +106,12 @@ body {
     justify-content: center;
 }
 
+/* Tela de Login */
+#login-modal {
+    justify-content: center;
+    gap: 1rem;
+}
+
 /* Nova Seção de Chaves de API */
 .api-key-section {
     background-color: rgba(0,0,0,0.2);
@@ -118,6 +124,7 @@ body {
     flex-direction: column;
     gap: 0.75rem;
 }
+
 
 /* Vídeo de fundo específico para o cabeçalho */
 #header-background-video {
@@ -169,11 +176,12 @@ body {
     font-family: 'Bangers', cursive;
     letter-spacing: 1.5px;
 }
-/* Específico para campos de senha */
-input[type="password"] {
+/* Específico para campos de senha e email */
+input[type="password"], input[type="email"] {
     font-family: sans-serif;
     letter-spacing: normal;
-    font-size: 0.875rem;
+    font-size: 1rem; /* Tamanho de fonte padrão para legibilidade */
+    color: #1f2937;
 }
 
 
@@ -255,7 +263,24 @@ input[type="range"]::-moz-range-thumb {
     transition: all 0.3s ease-in-out;
 }
 
-/* Controles Externos (Removido) */
+/* Controles Externos (RESTAURADO) */
+#external-controls {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+}
+.external-button, #download-container a {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+.external-button:hover, #download-container a:hover {
+    transform: scale(1.05);
+}
 
 
 /* Estilos para a lista de temas recentes */

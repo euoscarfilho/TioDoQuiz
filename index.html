@@ -14,6 +14,9 @@
     <!-- PWA: Link para o Manifesto -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e40af" />
+    
+    <!-- NOVO: Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- CSS Personalizado -->
     <link rel="stylesheet" href="style.css">
@@ -25,7 +28,7 @@
         <!-- Vídeo de Fundo Principal (ocupa a tela inteira) -->
         <video id="background-video" loop muted playsinline class="hidden"></video>
 
-         <!-- Canvas para a gravação recortada (removido, mas o ID pode ser mantido se necessário para outros recursos) -->
+         <!-- Canvas para a gravação recortada (oculto) -->
         <canvas id="cropping-canvas" class="hidden absolute top-0 left-0"></canvas>
 
         <!-- Área de Jogo Proporcional 9:16 -->
@@ -52,22 +55,36 @@
                 <h1 class="text-5xl text-yellow-400 drop-shadow-lg">Personalização</h1>
                 
                 <!-- Nova Seção de Chaves de API -->
-                <div class.api-key-section">
-                    <h2 class="text-3xl text-blue-200">Chaves de API (Seguro)</h2>
+                <div class="api-key-section">
+                    <h2 class="text-3xl text-blue-200">Configurações de Backend</h2>
                     <p class="text-sm text-blue-300 mb-2">(Salvo apenas no seu navegador)</p>
+                    
                     <div class="space-y-2">
-                        <label for="google-api-key" class="block text-xl">Chave API Google (Gemini)</label>
-                        <input type="password" id="google-api-key" class="input-field" placeholder="Cole sua chave Gemini aqui">
+                        <label for="supabase-url-input" class="block text-xl">URL da Função Supabase</label>
+                        <input type="password" id="supabase-url-input" class="input-field" placeholder="Cole a URL da sua Edge Function aqui">
+                    </div>
+                    
+                    <hr class="border-blue-500 my-2">
+
+                    <h2 class="text-3xl text-blue-200">Chaves de API (Eleven Labs)</h2>
+                    <p class="text-sm text-blue-300 mb-2">(Salvo no seu banco de dados Supabase)</p>
+                    <div class="space-y-2">
+                        <label for="key-name-input" class="block text-xl">Nome da Chave (ex: Conta 1)</label>
+                        <input type="text" id="key-name-input" class="input-field" placeholder="Nome para identificar a chave">
                     </div>
                     <div class="space-y-2">
                         <label for="elevenlabs-api-key" class="block text-xl">Chave API Eleven Labs</label>
-                        <input type="password" id="elevenlabs-api-key" class="input-field" placeholder="Cole sua chave Eleven Labs aqui">
+                        <input type="password" id="elevenlabs-api-key" class="input-field" placeholder="Cole sua chave aqui">
+                    </div>
+                    <button id="save-key-btn" class="main-button bg-green-600 hover:bg-green-700 w-full text-2xl">Salvar Nova Chave</button>
+                    
+                    <h3 class="text-2xl text-blue-200 pt-2">Chaves Salvas</h3>
+                    <div id="keys-list-container" class="text-left text-white text-lg">
+                        <!-- Lista de chaves será carregada aqui -->
                     </div>
                 </div>
 
-                <hr class="border-blue-600 my-2">
-
-                <h2 class="text-3xl text-blue-200 pt-2">Gerador de Conteúdo</h2>
+                <h2 class="text-3xl text-blue-200 pt-4">Gerador de Conteúdo</h2>
                 <div class="bg-blue-900/50 p-4 rounded-lg space-y-3">
                     <div class="space-y-2">
                         <label for="question-count-input" class="block text-xl">Perguntas: <span id="question-count-value" class="text-yellow-400 font-bold">5</span></label>
@@ -102,14 +119,15 @@
                 </div>
 
                 <button id="save-settings-btn" class="main-button bg-blue-600 hover:bg-blue-700 w-full mt-4">
-                    ✅ Salvar e Voltar ao Lobby
+                    ✅ Voltar ao Lobby
                 </button>
             </div>
 
             <div id="lobby-modal" class="modal-overlay hidden">
+                <button id="logout-btn" class="absolute top-4 right-4 text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg text-lg">Sair</button>
                 <div>
                     <h1 class="text-6xl text-yellow-400 drop-shadow-lg">Tio do Quiz</h1>
-                    <p class="text-2xl text-blue-200">Pronto para o desafio?</p>
+                    <p id="welcome-message" class="text-2xl text-blue-200">Pronto para o desafio?</p>
                 </div>
 
                 <div class="flex-grow flex flex-col justify-center gap-4">
@@ -122,6 +140,9 @@
                 <div class="flex flex-col gap-3 justify-center">
                     <button id="start-btn" class="main-button bg-green-600 hover:bg-green-700">
                         ▶️ Iniciar Jogo
+                    </button>
+                     <button id="record-btn" class="main-button bg-red-600 hover:bg-red-700">
+                        🔴 Iniciar Gravando
                     </button>
                     <button id="personalize-btn" class="main-button bg-yellow-500 hover:bg-yellow-600 text-blue-900">
                         ⚙️ Personalizar
@@ -154,10 +175,27 @@
                 </div>
             </div>
             
-            <!-- Tela de Login REMOVIDA -->
+            <!-- Nova Tela de Login -->
+            <div id="login-modal" class="modal-overlay hidden">
+                <div class="flex flex-col items-center justify-center h-full gap-4">
+                    <h1 class="text-6xl text-yellow-400 drop-shadow-lg">Tio do Quiz</h1>
+                    <p class="text-2xl text-blue-200">Acesso Restrito</p>
+                    <div class="w-full max-w-xs space-y-4">
+                         <input type="email" id="email-input" class="input-field" placeholder="Seu e-mail">
+                         <input type="password" id="password-input" class="input-field" placeholder="Sua senha">
+                         <button id="login-btn" class="main-button bg-green-600 hover:bg-green-700 w-full">Entrar</button>
+                    </div>
+                    <p id="login-error" class="text-red-400 text-lg hidden"></p>
+                </div>
+            </div>
 
         </div> 
 
+        <!-- Controles Externos -->
+        <div id="external-controls" class="hidden items-center justify-center gap-4 mt-4">
+            <button id="stop-record-btn" class="external-button bg-red-600 hover:bg-red-700 hidden">⏹️ Parar Gravação</button>
+            <div id="download-container"></div>
+        </div>
     </div>
     
     <audio id="sound-tick" src="./files/tick.mp3" preload="auto"></audio>

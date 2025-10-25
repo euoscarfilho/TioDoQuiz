@@ -1,14 +1,25 @@
+import * as C from './constants.js';
+
 // --- ESTADO DA APLICAÇÃO E CONFIGURAÇÕES ---
 export let settings = {};
-// export let isRecording = false; // Removido
+export let isRecording = false; // Flag para controlar o estado da gravação
 
-// export function setRecordingState(value) { // Removido
-//     isRecording = value;
-// }
+// --- CLIENTE SUPABASE ---
+export const supabase = C.supabaseClient;
 
-// export function checkPassword(password) { // Removido
-//     return password === MASTER_PASSWORD;
-// }
+export function setRecordingState(value) {
+    console.log("Estado de gravação alterado para:", value);
+    isRecording = value;
+}
+
+// Verifica se o usuário está logado
+export async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        return session.user;
+    }
+    return null;
+}
 
 export function saveSettings() {
     const generatedQuiz = settings.generatedQuiz;
@@ -16,17 +27,16 @@ export function saveSettings() {
     const generatedAudioMap = settings.generatedAudioMap;
 
     settings = {
-        theme: document.getElementById('quiz-theme-input').value.trim(),
-        numQuestions: document.getElementById('question-count-input').value,
-        numAnswers: document.getElementById('answer-count-input').value,
-        difficulty: document.getElementById('difficulty-input').value,
+        theme: C.themeInput.value.trim(),
+        numQuestions: C.questionCountInput.value,
+        numAnswers: C.answerCountInput.value,
+        difficulty: C.difficultyInput.value,
         generatedQuiz: generatedQuiz,
         generatedScript: generatedScript,
         generatedAudioMap: generatedAudioMap,
         
-        // Salva as chaves de API no localStorage
-        googleApiKey: document.getElementById('google-api-key').value.trim(),
-        elevenLabsApiKey: document.getElementById('elevenlabs-api-key').value.trim()
+        // Salva a URL da Função Supabase no localStorage
+        supabaseFunctionUrl: C.supabaseUrlInput.value.trim()
     };
     localStorage.setItem('tioDoQuizSettings', JSON.stringify(settings));
     updateUIFromSettings();
@@ -50,28 +60,26 @@ export function loadSettings() {
             generatedQuiz: null,
             generatedScript: null,
             generatedAudioMap: null,
-            googleApiKey: '',
-            elevenLabsApiKey: ''
+            supabaseFunctionUrl: '' // Novo estado
         };
     }
     updateUIFromSettings();
 }
 
 export function updateUIFromSettings() {
-    document.getElementById('quiz-theme-input').value = settings.theme || '';
-    document.getElementById('question-count-input').value = settings.numQuestions || '5';
-    document.getElementById('question-count-value').textContent = settings.numQuestions || '5';
-    document.getElementById('answer-count-input').value = settings.numAnswers || '3';
-    document.getElementById('answer-count-value').textContent = settings.numAnswers || '3';
-    document.getElementById('difficulty-input').value = settings.difficulty || 'Médio';
+    C.themeInput.value = settings.theme || '';
+    C.questionCountInput.value = settings.numQuestions || '5';
+    C.questionCountValue.textContent = settings.numQuestions || '5';
+    C.answerCountInput.value = settings.numAnswers || '3';
+    C.answerCountValue.textContent = settings.numAnswers || '3';
+    C.difficultyInput.value = settings.difficulty || 'Médio';
 
-    // Carrega as chaves salvas nos campos de personalização
-    document.getElementById('google-api-key').value = settings.googleApiKey || '';
-    document.getElementById('elevenlabs-api-key').value = settings.elevenLabsApiKey || '';
+    // Carrega a URL da função salva no campo de personalização
+    C.supabaseUrlInput.value = settings.supabaseFunctionUrl || '';
 
-    document.getElementById('user-logo').src = './files/logo.png';
-    document.getElementById('user-logo').onerror = () => { document.getElementById('user-logo').src = 'https://placehold.co/200x200/f59e0b/1e3a8a?text=Erro'; };
-    document.getElementById('user-logo').style.height = '200px'; // Tamanho Padrão
+    C.userLogo.src = C.DEFAULT_LOGO_URL;
+    C.userLogo.onerror = () => { C.userLogo.src = 'https://placehold.co/200x200/f59e0b/1e3a8a?text=Erro'; };
+    C.userLogo.style.height = `${C.DEFAULT_LOGO_SIZE}px`;
 }
 
 // --- LÓGICA DE TEMAS RECENTES ---

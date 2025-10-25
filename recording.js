@@ -10,13 +10,14 @@ let hiddenVideo;
 
 export async function startRecording() {
     console.log("Tentando iniciar gravação...");
+    setRecordingState(true); 
     try {
         originalStream = await navigator.mediaDevices.getDisplayMedia({
             video: { 
                 mediaSource: "screen",
-                cursor: "never" // Tenta ocultar o cursor
+                cursor: "never" 
             },
-            audio: true // Tenta capturar áudio do sistema/aba
+            audio: true 
         });
          console.log("Stream da tela obtido:", originalStream);
 
@@ -25,7 +26,6 @@ export async function startRecording() {
         console.log("Faixas de vídeo:", videoTrack);
         console.log("Faixas de áudio da tela:", audioTracks);
 
-        // Tenta obter áudio do microfone separadamente, se necessário
         let micStream = null;
         let micAudioTracks = [];
         if (audioTracks.length === 0) {
@@ -131,6 +131,9 @@ export async function startRecording() {
         mediaRecorder.ondataavailable = (event) => { 
             if (event.data.size > 0) {
                 recordedChunks.push(event.data);
+                console.log("Chunk recebido, tamanho:", event.data.size);
+            } else {
+                 console.log("Chunk vazio recebido.");
             }
         };
 
@@ -167,7 +170,7 @@ export async function startRecording() {
 
         mediaRecorder.start(1000); 
         console.log("Gravação iniciada.");
-        setRecordingState(true);
+        setRecordingState(true); 
         
         originalStream.getVideoTracks()[0].onended = () => {
             console.log("Compartilhamento de tela encerrado pelo usuário.");
