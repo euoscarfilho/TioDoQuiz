@@ -113,4 +113,3 @@ export function loadAndRenderRecentThemes(onThemeClickCallback) {
         recentThemesContainer.appendChild(themeBtn);
     });
 }
-

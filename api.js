@@ -12,21 +12,21 @@ export async function handleSaveKeyClick() {
     }
 
     try {
-        const { data: { user }, error } = await supabase.auth.getUser(); // Corrigido para pegar o usuário
-        if (error || !user) throw new Error("Usuário não autenticado para salvar chave.");
+        // Verifica se o usuário está autenticado para obter o ID
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) throw new Error("Usuário não autenticado para salvar chave.");
         
-        const { data: insertData, error: insertError } = await supabase
+        const { error: insertError } = await supabase
             .from('elevenlabs_keys')
             .insert([
-                // A coluna 'user_id' será preenchida automaticamente pelas RLS (Row Level Security)
-                { nome_da_chave: keyName, api_key: keyValue } 
+                { nome_da_chave: keyName, api_key: keyValue, user_id: user.id } 
             ]);
         
         if (insertError) {
             throw insertError;
         }
 
-        console.log("Chave salva:", insertData);
+        console.log("Chave salva com sucesso para o usuário:", user.id);
         C.keyNameInput.value = '';
         C.elevenLabsApiKeyInput.value = '';
         alert("Chave do Eleven Labs salva com sucesso!");
@@ -40,22 +40,39 @@ export async function handleSaveKeyClick() {
     }
 }
 
+// CORREÇÃO: Adicionando 'export' para que script.js possa acessar
+export function handleSaveSupabaseUrlClick() {
+    const url = C.supabaseUrlInput.value.trim();
+    if (!url || !url.startsWith('https://')) {
+        alert("Por favor, insira uma URL HTTPS válida.");
+        return;
+    }
+    
+    // Simplesmente atualiza o campo no objeto settings e salva no localStorage
+    settings.supabaseFunctionUrl = url;
+    saveSettings(); 
+    alert("URL da Função Supabase salva com sucesso!");
+}
 
-// --- GERAÇÃO DE ÁUDIO (AGORA CHAMA O BACKEND) ---
+
+// --- GERAÇÃO DE ÁUDIO (CHAMA A EDGE FUNCTION) ---
 async function fetchAudio(text, speed = 1.20) {
     // Esta função agora está dentro do backend (index.ts)
     // O frontend só precisa do áudioMap que vem do backend.
     throw new Error("Função fetchAudio não deve ser chamada pelo frontend.");
 }
 
-// --- Lógica de Verificação de Créditos (AGORA CHAMA O BACKEND) ---
+/**
+ * Busca os créditos restantes da conta Eleven Labs.
+ * Retorna uma string formatada.
+ */
 async function fetchElevenLabsCredits() {
-    // Esta função agora está dentro do backend (index.ts)
     throw new Error("Função fetchElevenLabsCredits não deve ser chamada pelo frontend.");
 }
 
 
 // --- LÓGICA DE GERAÇÃO DE CONTEÚDO E ROTEIRO ---
+
 export async function generateQuizAndScriptFromTheme() {
     const config = {
         theme: C.themeInput.value.trim(),
@@ -77,17 +94,28 @@ export async function generateQuizAndScriptFromTheme() {
     }
     const token = sessionData.session.access_token;
     
+    // A chamada envia o token de autenticação
     const response = await fetch(SUPABASE_FUNCTION_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}` // ENVIA O TOKEN JWT
         },
         body: JSON.stringify(config)
     });
 
     if (!response.ok) {
-        const errorBody = await response.json();
+        // Tenta ler o erro do corpo da resposta, se disponível
+        const errorBody = await response.json().catch(() => ({ error: `Erro HTTP ${response.status}` }));
+        
+        // Trata erros 401 e 400 explicitamente
+        if (response.status === 401) {
+            throw new Error(`Erro de Segurança: 401 (Não Autorizado). Verifique as políticas RLS no Supabase.`);
+        }
+         if (response.status === 400) {
+            throw new Error(`Erro de Requisição: 400. Verifique as variáveis de ambiente no Supabase Secrets.`);
+        }
+        
         throw new Error(errorBody.error || `Erro no servidor: ${response.status}`);
     }
 
@@ -175,4 +203,3 @@ export function handleDownloadScriptClick() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
-

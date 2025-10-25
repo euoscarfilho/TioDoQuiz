@@ -73,14 +73,14 @@ export function showScreen(screenName) {
         forceStopRecording();
     } else if (screenName === 'personalization') {
         C.personalizationModal.classList.remove('hidden');
-        loadKeysIntoList(); // Carrega as chaves salvas ao abrir
+        loadKeysIntoList(); // Carrega a lista de chaves ao abrir
     } else if (screenName === 'quiz') {
         C.mainContent.classList.remove('hidden');
         C.userHeader.classList.remove('hidden');
         
         if (isRecording) {
             C.externalControls.classList.remove('hidden');
-            C.stopRecordBtn.classList.remove('hidden'); // Mostra o botão de parar
+            C.stopRecordBtn.classList.remove('hidden'); 
             C.downloadContainer.innerHTML = ''; 
         }
 
@@ -93,21 +93,17 @@ export function showScreen(screenName) {
         C.finalizationModal.classList.remove('hidden');
         
         const startFinalSequence = async () => {
-            // Toca o som de vitória (se existir localmente)
-            // C.soundFinal.play()... (removido, pois estamos usando áudio dinâmico)
             
             await new Promise(resolve => setTimeout(resolve, 300));
             
-            // Toca o áudio do CTA
             if (settings.generatedAudioMap && settings.generatedAudioMap['cta_final']) {
                 await playAudioAndWait(settings.generatedAudioMap['cta_final']);
             }
             
-            // Se estava gravando, mostra o botão "Parar e Salvar" após 5s
             if (isRecording) {
                 C.downloadContainer.innerHTML = ''; 
                 C.externalControls.classList.remove('hidden'); 
-                C.stopRecordBtn.classList.add('hidden'); // Esconde o botão de parar
+                C.stopRecordBtn.classList.add('hidden'); 
                 
                 C.downloadTimeoutId = setTimeout(() => {
                     const saveBtn = document.createElement('button');
@@ -143,11 +139,18 @@ export function handleBackButton(event) {
 export async function loadKeysIntoList() {
     C.keysListContainer.innerHTML = `<p class="text-blue-300">Carregando chaves...</p>`;
     try {
+        // CORREÇÃO: Busca todas as colunas para evitar o erro 42703
         const { data: keys, error } = await supabase
             .from('elevenlabs_keys')
-            .select('id, nome_da_chave, created_at');
+            .select('*');
 
         if (error) {
+            if (error.status === 401) {
+                 C.keysListContainer.innerHTML = `<p class="text-red-400">Sessão expirada. Faça o login novamente.</p>`;
+                 return;
+            }
+             // Captura e exibe o erro exato
+            C.keysListContainer.innerHTML = `<p class="text-red-400">Erro ao buscar: ${error.message}</p>`;
             throw error;
         }
         
@@ -158,10 +161,13 @@ export async function loadKeysIntoList() {
 
         C.keysListContainer.innerHTML = ''; // Limpa a lista
         keys.forEach(key => {
+            // Usa 'id' se existir, ou 'created_at' como fallback para o botão Excluir
+            const identifier = key.id || key.created_at; 
+
             const keyEl = document.createElement('div');
             keyEl.className = "flex justify-between items-center bg-blue-800 p-2 rounded";
             keyEl.innerHTML = `<span>${key.nome_da_chave} (Adicionada em: ${new Date(key.created_at).toLocaleDateString()})</span>
-                             <button data-id="${key.id}" class="delete-key-btn bg-red-600 text-white px-2 py-1 rounded text-sm">Excluir</button>`;
+                             <button data-id="${identifier}" class="delete-key-btn bg-red-600 text-white px-2 py-1 rounded text-sm">Excluir</button>`;
             C.keysListContainer.appendChild(keyEl);
         });
 
@@ -176,17 +182,18 @@ export async function loadKeysIntoList() {
         });
     } catch (error) {
          console.error("Erro ao buscar chaves:", error);
-         C.keysListContainer.innerHTML = `<p class="text-red-400">Erro ao carregar chaves.</p>`;
+         C.keysListContainer.innerHTML = `<p class="text-red-400">Erro ao buscar chaves.</p>`;
     }
 }
 
 // Função para deletar a chave
 async function handleDeleteKeyClick(id) {
     try {
+        // CORREÇÃO: Usar o delete() para excluir a linha
         const { error } = await supabase
             .from('elevenlabs_keys')
             .delete()
-            .match({ id: id });
+            .match({ id: id }); // Assume que 'id' é a chave primária
 
         if (error) {
             throw error;
@@ -199,4 +206,3 @@ async function handleDeleteKeyClick(id) {
         alert("Erro ao excluir chave.");
     }
 }
-
