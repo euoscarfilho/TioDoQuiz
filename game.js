@@ -1,67 +1,9 @@
 import * as C from './constants.js';
 import { settings, setRecordingState } from './state.js';
 import { showScreen } from './ui.js';
-// import { startRecording, stopRecordingAndDownload } from './recording.js'; // Removido
+import { startRecording, stopRecordingAndDownload } from './recording.js';
 
 // --- LÓGICA DO JOGO ---
-
-// Função auxiliar para tocar um áudio e esperar ele terminar
-function playAudioAndWait(audioUrl) {
-    return new Promise((resolve, reject) => {
-        if (!audioUrl) {
-            console.warn("URL de áudio vazia, pulando.");
-            resolve();
-            return;
-        }
-        const audio = new Audio(audioUrl);
-        
-        // Tenta tocar o áudio
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(e => {
-                console.error("Erro ao tocar áudio:", e);
-                // Se falhar (ex: autoplay bloqueado), resolve mesmo assim
-                resolve(); 
-            });
-        }
-        audio.onended = resolve; // Resolve quando o áudio termina
-        audio.onerror = (e) => {
-             console.error("Erro no elemento de áudio:", e);
-             resolve(); // Resolve em caso de erro
-        };
-    });
-}
-
-// Função para rodar um timer visual de 5 segundos
-function runVisualTimer(questionBlock) {
-    return new Promise(resolve => {
-        const timerContainer = questionBlock.querySelector('.visual-timer-container');
-        const timerBar = timerContainer.querySelector('.visual-timer-bar');
-        
-        if (!timerContainer || !timerBar) return resolve();
-
-        timerContainer.classList.remove('hidden');
-        timerBar.style.width = '100%'; 
-
-        C.soundTick.currentTime = 0;
-        C.soundTick.play().catch(e => console.warn("Não foi possível tocar o som de tick:", e));
-
-        // Força o navegador a aplicar o 100% antes de transicionar para 0%
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                 timerBar.style.transition = 'width 5s linear';
-                 timerBar.style.width = '0%';
-            });
-        });
-
-        setTimeout(() => {
-            C.soundTick.pause();
-            C.soundTick.currentTime = 0;
-            resolve();
-        }, 5000); // 5 segundos
-    });
-}
-
 
 // Função para tentar entrar em Fullscreen
 async function requestFullscreen() {
@@ -77,69 +19,57 @@ async function requestFullscreen() {
          return true;
     } catch (err) {
         console.warn("Não foi possível entrar em fullscreen:", err.message);
-        return false; 
+        return false; // Retorna false se falhar
     }
 }
 
 
-export async function startGame() {
-    // Verifica se o quiz foi gerado
-    if (!settings.generatedQuiz || !settings.generatedAudioMap) {
+export async function startGame(withRecording = false) {
+    if (!settings.generatedQuiz) {
         alert('Por favor, gere um quiz na tela de personalização primeiro!');
         showScreen('personalization');
         return;
     }
 
-    // Verifica se as chaves de API estão presentes
-     if (!settings.googleApiKey || !settings.elevenLabsApiKey) {
-         alert("Suas chaves de API não estão salvas. Por favor, configure-as na tela de Personalização.");
-         showScreen('personalization');
-         return;
-    }
-
-    await requestFullscreen();
+    const fullscreenSuccess = await requestFullscreen();
+    setRecordingState(withRecording); // Define o estado de gravação
 
     // Define a fonte dos vídeos
     C.backgroundVideo.src = C.DEFAULT_VIDEO_URL;
     C.headerBackgroundVideo.src = C.DEFAULT_VIDEO_URL;
 
-    // Inicia a tela de pré-jogo
-    proceedToPreGame();
+    // Função interna para iniciar o pré-jogo e gravação (se aplicável)
+    const proceedToPreGame = async () => {
+        showScreen('pre-game');
+        document.getElementById('pre-game-logo').src = C.DEFAULT_LOGO_URL;
+
+        if (withRecording) {
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+            const recordingStarted = await startRecording();
+            if (!recordingStarted) {
+                setRecordingState(false); // Reseta se a gravação falhar
+                setTimeout(startQuizSequence, 5000); 
+                return; 
+            }
+        }
+        setTimeout(startQuizSequence, 5000);
+    };
+
+    // Função interna para iniciar a sequência do quiz
+    const startQuizSequence = () => {
+        showScreen('quiz');
+        C.quizTitle.textContent = `Quiz: ${settings.theme}`;
+        document.getElementById('final-logo').src = C.DEFAULT_LOGO_URL;
+        buildQuiz(settings.generatedQuiz);
+    };
+
+    proceedToPreGame(); 
 }
 
-// Função interna para iniciar o pré-jogo
-const proceedToPreGame = async () => {
-    showScreen('pre-game');
-    document.getElementById('pre-game-logo').src = C.DEFAULT_LOGO_URL;
-
-    // Adiciona delay de 300ms antes da narração de boas-vindas
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Toca o áudio de boas-vindas
-    await playAudioAndWait(settings.generatedAudioMap['welcome']);
-    
-    // Inicia o quiz IMEDIATAMENTE após o áudio
-    startQuizSequence();
-};
-
-// Função interna para iniciar a sequência do quiz
-const startQuizSequence = async () => {
-    showScreen('quiz');
-    C.quizTitle.textContent = `Quiz: ${settings.theme}`;
-    document.getElementById('final-logo').src = C.DEFAULT_LOGO_URL;
-    buildQuiz(settings.generatedQuiz);
-    
-    // Toca o áudio do tema e então inicia a sequência do quiz
-    await playAudioAndWait(settings.generatedAudioMap['quiz_theme']);
-    playAudioSequence(settings.generatedQuiz, settings.generatedAudioMap);
-};
-
-
-// Constrói o quiz sem botões de timer, mas com a barra de timer
 function buildQuiz(data) {
     C.quizContainer.innerHTML = '';
     
-    // Garante que a rolagem comece do topo
+    // AJUSTE: Garante que a rolagem comece do topo
     C.mainContent.scrollTop = 0; 
 
     data.forEach((item, index) => {
@@ -164,48 +94,54 @@ function buildQuiz(data) {
         });
         questionBlock.appendChild(alternativesContainer);
 
-        // Adiciona um container para o timer visual
-        const timerVisual = document.createElement('div');
-        timerVisual.id = `timer-visual-${index}`;
-        timerVisual.className = 'visual-timer-container hidden'; // Começa oculto
-        timerVisual.innerHTML = `<div class="visual-timer-bar"></div>`;
-        questionBlock.appendChild(timerVisual);
+        const button = document.createElement('button');
+        button.id = `timer-btn-${index}`;
+        button.className = 'floating-timer-button bg-blue-600 text-white shadow-lg hover:bg-blue-700';
+        button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+        button.addEventListener('click', () => startTimer(index, button, data), { once: true });
+        questionBlock.appendChild(button);
 
-        // Botão flutuante foi REMOVIDO
         C.quizContainer.appendChild(questionBlock);
     });
 }
 
-// A "Mágica": a sequência automática do quiz
-async function playAudioSequence(quizData, audioMap) {
-    for (let i = 0; i < quizData.length; i++) {
-        const item = quizData[i];
-        const questionBlock = document.getElementById(`question-block-${i}`);
-        
-        if (questionBlock) {
-            questionBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            await new Promise(res => setTimeout(res, 500)); // Espera a rolagem
+function startTimer(questionIndex, button, currentQuizData) {
+    button.disabled = true;
+    C.soundTick.play().then(() => {
+         C.soundTick.currentTime = 0; // Garante reinício
+    }).catch(e => console.warn("Não foi possível tocar o som de tick:", e));
+    let seconds = 5;
+    button.innerHTML = seconds;
+    const countdown = setInterval(() => {
+        seconds--;
+        button.innerHTML = seconds;
+        if (seconds <= 0) {
+            clearInterval(countdown);
+            C.soundTick.pause();
+            C.soundTick.currentTime = 0;
+            button.innerHTML = 'Fim!';
+            const correctAlternative = document.getElementById(`q${questionIndex}-ans${currentQuizData[questionIndex].correctIndex}`);
+            if (correctAlternative) {
+                correctAlternative.classList.add('correct-answer');
+                 C.soundCorrect.play().then(() => {
+                    C.soundCorrect.currentTime = 0;
+                 }).catch(e => console.warn("Não foi possível tocar o som de acerto:", e));
+            }
+
+            const isLastQuestion = questionIndex === currentQuizData.length - 1;
+            const delay = isLastQuestion ? 3000 : 1000;
+
+            setTimeout(() => {
+                if (isLastQuestion) {
+                    showScreen('finalization'); 
+                } else {
+                    const nextQuestionBlock = document.getElementById(`question-block-${questionIndex + 1}`);
+                    if (nextQuestionBlock) {
+                        nextQuestionBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            }, delay);
         }
-
-        await playAudioAndWait(audioMap[`q${i}_q`]);
-        
-        await runVisualTimer(questionBlock);
-
-        const correctAlternativeEl = document.getElementById(`q${i}-ans${item.correctIndex}`);
-        if (correctAlternativeEl) {
-            correctAlternativeEl.classList.add('correct-answer');
-            C.soundCorrect.play().then(() => C.soundCorrect.currentTime = 0).catch(e => console.warn("Erro no som de acerto:", e));
-        }
-        
-        await playAudioAndWait(audioMap[`q${i}_r`]);
-
-        const isLastQuestion = i === quizData.length - 1;
-        const delay = isLastQuestion ? 3000 : 1000;
-        await new Promise(res => setTimeout(res, delay));
-
-        if (isLastQuestion) {
-            showScreen('finalization'); 
-        }
-    }
+    }, 1000);
 }
 

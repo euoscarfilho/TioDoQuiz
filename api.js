@@ -1,75 +1,5 @@
 import * as C from './constants.js';
-import { settings, saveRecentTheme, saveSettings, supabase } from './state.js';
-
-// --- LÓGICA DE CHAVES (Salvar no Supabase) ---
-export async function handleSaveKeyClick() {
-    const keyName = C.keyNameInput.value.trim();
-    const keyValue = C.elevenLabsApiKeyInput.value.trim();
-
-    if (!keyName || !keyValue) {
-        alert("Por favor, preencha o nome e a chave da API.");
-        return;
-    }
-
-    try {
-        // Verifica se o usuário está autenticado para obter o ID
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) throw new Error("Usuário não autenticado para salvar chave.");
-        
-        const { error: insertError } = await supabase
-            .from('elevenlabs_keys')
-            .insert([
-                { nome_da_chave: keyName, api_key: keyValue, user_id: user.id } 
-            ]);
-        
-        if (insertError) {
-            throw insertError;
-        }
-
-        console.log("Chave salva com sucesso para o usuário:", user.id);
-        C.keyNameInput.value = '';
-        C.elevenLabsApiKeyInput.value = '';
-        alert("Chave do Eleven Labs salva com sucesso!");
-        
-        // Recarrega a lista de chaves (importando a função)
-        import('./ui.js').then(ui => ui.loadKeysIntoList());
-
-    } catch (error) {
-        console.error("Erro ao salvar chave:", error);
-        alert(`Erro ao salvar chave: ${error.message}`);
-    }
-}
-
-// CORREÇÃO: Adicionando 'export' para que script.js possa acessar
-export function handleSaveSupabaseUrlClick() {
-    const url = C.supabaseUrlInput.value.trim();
-    if (!url || !url.startsWith('https://')) {
-        alert("Por favor, insira uma URL HTTPS válida.");
-        return;
-    }
-    
-    // Simplesmente atualiza o campo no objeto settings e salva no localStorage
-    settings.supabaseFunctionUrl = url;
-    saveSettings(); 
-    alert("URL da Função Supabase salva com sucesso!");
-}
-
-
-// --- GERAÇÃO DE ÁUDIO (CHAMA A EDGE FUNCTION) ---
-async function fetchAudio(text, speed = 1.20) {
-    // Esta função agora está dentro do backend (index.ts)
-    // O frontend só precisa do áudioMap que vem do backend.
-    throw new Error("Função fetchAudio não deve ser chamada pelo frontend.");
-}
-
-/**
- * Busca os créditos restantes da conta Eleven Labs.
- * Retorna uma string formatada.
- */
-async function fetchElevenLabsCredits() {
-    throw new Error("Função fetchElevenLabsCredits não deve ser chamada pelo frontend.");
-}
-
+import { settings, saveRecentTheme, saveSettings } from './state.js';
 
 // --- LÓGICA DE GERAÇÃO DE CONTEÚDO E ROTEIRO ---
 
@@ -80,84 +10,55 @@ export async function generateQuizAndScriptFromTheme() {
         numAnswers: C.answerCountInput.value,
         difficulty: C.difficultyInput.value
     };
+    const apiKey = "AIzaSyDARpDwQ918DzKAtd374ab_yxa2N8akaZ0";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
     
-    // Pega a URL da função salva nas configurações
-    const SUPABASE_FUNCTION_URL = settings.supabaseFunctionUrl;
-    if (!SUPABASE_FUNCTION_URL) {
-        throw new Error("URL da Função Supabase não configurada na tela de Personalização.");
-    }
-    
-    // --- CHAMA O NOSSO BACKEND SEGURO (A EDGE FUNCTION) ---
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-        throw new Error("Usuário não autenticado. Faça o login novamente.");
-    }
-    const token = sessionData.session.access_token;
-    
-    // A chamada envia o token de autenticação
-    const response = await fetch(SUPABASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // ENVIA O TOKEN JWT
-        },
-        body: JSON.stringify(config)
-    });
+    const systemPrompt = `Você é o "Tio do Quiz", um especialista em criar conteúdo viral para o TikTok. Sua tarefa é gerar um quiz em formato JSON e um roteiro de narração para um vídeo. Responda estritamente no formato JSON especificado, sem markdown ou qualquer texto fora do objeto JSON.`;
+    const userQuery = `Gere um quiz e um roteiro para o TikTok.
+    Tema: "${config.theme}"
+    Dificuldade: "${config.difficulty}"
+    Número de Perguntas: ${config.numQuestions}
+    Número de Alternativas por Pergunta: ${config.numAnswers}
 
-    if (!response.ok) {
-        // Tenta ler o erro do corpo da resposta, se disponível
-        const errorBody = await response.json().catch(() => ({ error: `Erro HTTP ${response.status}` }));
-        
-        // Trata erros 401 e 400 explicitamente
-        if (response.status === 401) {
-            throw new Error(`Erro de Segurança: 401 (Não Autorizado). Verifique as políticas RLS no Supabase.`);
-        }
-         if (response.status === 400) {
-            throw new Error(`Erro de Requisição: 400. Verifique as variáveis de ambiente no Supabase Secrets.`);
-        }
-        
-        throw new Error(errorBody.error || `Erro no servidor: ${response.status}`);
-    }
+    O roteiro deve ser uma narração objetiva para o "Tio do Quiz", com as perguntas, alternativas e respostas, e uma chamada para ação (CTA) no final pedindo para comentar a pontuação e seguir o perfil. As perguntas no roteiro devem ser curtas e diretas.`;
 
-    const result = await response.json();
-    
-    // Converte os áudios de Base64 (do backend) para Blob URLs
-    const audioMap = {};
-    if (result.audioMap) {
-        for (const key in result.audioMap) {
-            const base64Data = result.audioMap[key].split(',')[1];
-            if (!base64Data) {
-                console.warn(`Áudio inválido recebido para: ${key}`);
-                continue;
+    const payload = {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: userQuery }] }],
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    "quiz": {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                "question": { "type": "STRING" },
+                                "answers": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "text": { "type": "STRING" } } } },
+                                "correctIndex": { "type": "NUMBER" }
+                            },
+                            required: ["question", "answers", "correctIndex"]
+                        }
+                    },
+                    "script": { "type": "STRING" }
+                },
+                required: ["quiz", "script"]
             }
-            const binaryString = window.atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const blob = new Blob([bytes.buffer], { type: 'audio/mpeg' });
-            audioMap[key] = URL.createObjectURL(blob);
         }
-    } else {
-         throw new Error("O backend não retornou um mapa de áudios.");
-    }
-
-    return {
-        quiz: result.quiz,
-        script: result.script,
-        audioMap: audioMap,
-        credits: result.credits
     };
+
+    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) throw new Error(`Erro de rede da API: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    if (!result.candidates || result.candidates.length === 0) throw new Error("A IA não retornou um resultado. O tema pode ter sido bloqueado.");
+    const part = result.candidates[0]?.content?.parts?.[0];
+    if (!part || !part.text) throw new Error("A IA retornou uma resposta em um formato inesperado.");
+    return JSON.parse(part.text);
 }
 
-
 export async function handleGenerateContentClick() {
-    if (!settings.supabaseFunctionUrl) {
-         alert("Por favor, configure a URL da sua Função Supabase na tela de Personalização.");
-         return;
-    }
-
     const theme = C.themeInput.value.trim();
     if (!theme) {
         alert("Por favor, insira um tema para gerar o quiz.");
@@ -165,18 +66,17 @@ export async function handleGenerateContentClick() {
     }
     
     C.generateContentBtn.disabled = true;
-    C.generateContentBtn.textContent = "Gerando... (Pode levar um minuto)";
+    C.generateContentBtn.textContent = "Gerando...";
     C.generationOutput.classList.add('hidden');
 
     try {
         const result = await generateQuizAndScriptFromTheme();
         settings.generatedQuiz = result.quiz;
         settings.generatedScript = result.script;
-        settings.generatedAudioMap = result.audioMap; 
         saveRecentTheme(theme);
-        saveSettings(); // Salva o quiz, script e áudios na memória local
+        saveSettings();
 
-        C.generationSuccessMsg.textContent = `Quiz gerado! (${result.credits})`; 
+        C.generationSuccessMsg.textContent = `Quiz e roteiro sobre "${theme}" gerados com sucesso!`;
         C.generationOutput.classList.remove('hidden');
 
     } catch (error) {

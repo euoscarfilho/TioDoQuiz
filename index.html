@@ -12,11 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
     
     <!-- PWA: Link para o Manifesto -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1e40af" />
-    
-    <!-- NOVO: Supabase Client Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- CSS Personalizado -->
     <link rel="stylesheet" href="style.css">
@@ -54,39 +51,6 @@
             <div id="personalization-modal" class="modal-overlay hidden">
                 <h1 class="text-5xl text-yellow-400 drop-shadow-lg">Personalização</h1>
                 
-                <!-- Seção de Chaves de API -->
-                <div class="api-key-section">
-                    <h2 class="text-3xl text-blue-200">Configurações de Backend</h2>
-                    <p class="text-sm text-blue-300 mb-2">(Salvo apenas no seu navegador)</p>
-                    
-                    <div class="space-y-2">
-                        <label for="supabase-url-input" class="block text-xl">URL da Função Supabase</label>
-                        <input type="password" id="supabase-url-input" class="input-field" placeholder="Cole a URL da sua Edge Function aqui">
-                    </div>
-                     <!-- NOVO BOTÃO: Salvar URL -->
-                    <button id="save-supabase-url-btn" class="main-button bg-yellow-600 hover:bg-yellow-700 w-full text-lg py-1">Salvar URL da Função</button>
-
-                    
-                    <hr class="border-blue-500 my-2">
-
-                    <h2 class="text-3xl text-blue-200">Chaves de API (Eleven Labs)</h2>
-                    <p class="text-sm text-blue-300 mb-2">(Salvo no seu banco de dados Supabase)</p>
-                    <div class="space-y-2">
-                        <label for="key-name-input" class="block text-xl">Nome da Chave (ex: Conta 1)</label>
-                        <input type="text" id="key-name-input" class="input-field" placeholder="Nome para identificar a chave">
-                    </div>
-                    <div class="space-y-2">
-                        <label for="elevenlabs-api-key" class="block text-xl">Chave API Eleven Labs</label>
-                        <input type="password" id="elevenlabs-api-key" class="input-field" placeholder="Cole sua chave aqui">
-                    </div>
-                    <button id="save-key-btn" class="main-button bg-green-600 hover:bg-green-700 w-full text-2xl">Salvar Nova Chave</button>
-                    
-                    <h3 class="text-2xl text-blue-200 pt-2">Chaves Salvas</h3>
-                    <div id="keys-list-container" class="text-left text-white text-lg">
-                        <!-- Lista de chaves será carregada aqui -->
-                    </div>
-                </div>
-
                 <h2 class="text-3xl text-blue-200 pt-4">Gerador de Conteúdo</h2>
                 <div class="bg-blue-900/50 p-4 rounded-lg space-y-3">
                     <div class="space-y-2">
@@ -122,15 +86,14 @@
                 </div>
 
                 <button id="save-settings-btn" class="main-button bg-blue-600 hover:bg-blue-700 w-full mt-4">
-                    ✅ Voltar ao Lobby
+                    ✅ Salvar e Voltar ao Lobby
                 </button>
             </div>
 
             <div id="lobby-modal" class="modal-overlay hidden">
-                <button id="logout-btn" class="absolute top-4 right-4 text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg text-lg">Sair</button>
                 <div>
                     <h1 class="text-6xl text-yellow-400 drop-shadow-lg">Tio do Quiz</h1>
-                    <p id="welcome-message" class="text-2xl text-blue-200">Pronto para o desafio?</p>
+                    <p class="text-2xl text-blue-200">Pronto para o desafio?</p>
                 </div>
 
                 <div class="flex-grow flex flex-col justify-center gap-4">
@@ -155,16 +118,10 @@
 
             <!-- Nova Tela de Pre-Game -->
             <div id="pre-game-modal" class="modal-overlay hidden">
-                <!-- Conteúdo Padrão (oculto inicialmente) -->
-                <div id="pre-game-content" class="flex-col items-center justify-between h-full py-16 hidden">
-                    <p id="pre-game-text-top" class="text-4xl text-yellow-400 drop-shadow-lg">PRONTO PARA O DESAFIO?</p>
+                <div class="flex flex-col items-center justify-between h-full py-16">
+                    <p class="text-4xl text-yellow-400 drop-shadow-lg">PRONTO PARA O DESAFIO?</p>
                     <img id="pre-game-logo" src="" alt="Sua Logo" class="max-w-[70%] rounded-lg">
-                    <p id="pre-game-text-bottom" class="text-4xl text-white drop-shadow-md">DUVIDO VOCÊ ACERTAR</p>
-                </div>
-                <!-- Tela de Carregamento (visível inicialmente) -->
-                <div id="pre-game-loading" class="flex flex-col items-center justify-center h-full gap-4">
-                    <p class="text-3xl text-yellow-400 drop-shadow-lg">Carregando o quiz...</p>
-                    <div class="w-12 h-12 border-4 border-t-yellow-400 border-white/20 rounded-full animate-spin"></div>
+                    <p class="text-4xl text-white drop-shadow-md">DUVIDO VOCÊ ACERTAR</p>
                 </div>
             </div>
 
@@ -177,39 +134,23 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Nova Tela de Login -->
-            <div id="login-modal" class="modal-overlay hidden">
-                <div class="flex flex-col items-center justify-center h-full gap-4">
-                    <h1 class="text-6xl text-yellow-400 drop-shadow-lg">Tio do Quiz</h1>
-                    <p class="text-2xl text-blue-200">Acesso Restrito</p>
-                    <div class="w-full max-w-xs space-y-4">
-                         <input type="email" id="email-input" class="input-field" placeholder="Seu e-mail">
-                         <input type="password" id="password-input" class="input-field" placeholder="Sua senha">
-                         <button id="login-btn" class="main-button bg-green-600 hover:bg-green-700 w-full">Entrar</button>
-                    </div>
-                    <p id="login-error" class="text-red-400 text-lg hidden"></p>
-                </div>
-            </div>
-
         </div> 
 
         <!-- Controles Externos -->
         <div id="external-controls" class="hidden items-center justify-center gap-4 mt-4">
-            <button id="stop-record-btn" class="external-button bg-red-600 hover:bg-red-700 hidden">⏹️ Parar Gravação</button>
             <div id="download-container"></div>
         </div>
     </div>
     
     <audio id="sound-tick" src="./files/tick.mp3" preload="auto"></audio>
     <audio id="sound-correct" src="./files/correct.mp3" preload="auto"></audio>
-    <!-- <audio id="sound-final" src="./files/final.mp3" preload="auto"></audio> --> <!-- CTA é dinâmico -->
+    <audio id="sound-final" src="./files/final.mp3" preload="auto"></audio>
 
     <script type="module" src="script.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('/sw.js')
                     .then(registration => console.log('Service Worker registrado com sucesso:', registration))
                     .catch(error => console.log('Falha ao registrar o Service Worker:', error));
             });
@@ -217,3 +158,4 @@
     </script>
 </body>
 </html>
+

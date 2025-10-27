@@ -10,14 +10,13 @@ let hiddenVideo;
 
 export async function startRecording() {
     console.log("Tentando iniciar gravação...");
-    setRecordingState(true); 
     try {
         originalStream = await navigator.mediaDevices.getDisplayMedia({
             video: { 
                 mediaSource: "screen",
-                cursor: "never" 
+                cursor: "never" // Tenta ocultar o cursor
             },
-            audio: true 
+            audio: true // Tenta capturar áudio do sistema/aba
         });
          console.log("Stream da tela obtido:", originalStream);
 
@@ -26,6 +25,7 @@ export async function startRecording() {
         console.log("Faixas de vídeo:", videoTrack);
         console.log("Faixas de áudio da tela:", audioTracks);
 
+        // Tenta obter áudio do microfone separadamente, se necessário
         let micStream = null;
         let micAudioTracks = [];
         if (audioTracks.length === 0) {
@@ -39,6 +39,7 @@ export async function startRecording() {
              }
         }
         
+        // Combina as faixas de áudio (se houver de ambas as fontes)
         const finalAudioTracks = audioTracks.length > 0 ? audioTracks : micAudioTracks;
 
 
@@ -107,8 +108,9 @@ export async function startRecording() {
         canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
         console.log("Faixa de vídeo do Canvas adicionada.");
 
+        // Adiciona a faixa de áudio final (sistema ou microfone)
         if (finalAudioTracks.length > 0) {
-             combinedStream.addTrack(finalAudioTracks[0].clone());
+             combinedStream.addTrack(finalAudioTracks[0].clone()); // Usa clone para segurança
              console.log("Faixa de áudio final adicionada ao combinedStream.");
         } else {
              console.warn("Nenhuma faixa de áudio será incluída na gravação.");
@@ -139,6 +141,7 @@ export async function startRecording() {
 
         mediaRecorder.onstop = () => {
             console.log("MediaRecorder parado. Chunks:", recordedChunks.length);
+            // Garante que a limpeza ocorra APÓS o blob ser processado
             setTimeout(() => { 
                 if (recordedChunks.length === 0) {
                     console.warn("Nenhum dado gravado.");
@@ -159,19 +162,21 @@ export async function startRecording() {
                 a.textContent = 'Baixar Vídeo (9:16)';
                 a.className = 'external-button bg-green-600 hover:bg-green-700';
                 
-                C.downloadContainer.innerHTML = ''; 
+                C.downloadContainer.innerHTML = ''; // Limpa antes de adicionar novo link
                 C.downloadContainer.appendChild(a);
                 console.log("Link de download criado.");
 
-                forceStopRecording(); 
-            }, 500); 
+                forceStopRecording(); // Limpeza final dos recursos
+            }, 500); // Meio segundo de delay
 
         };
 
+        // Inicia a gravação
         mediaRecorder.start(1000); 
         console.log("Gravação iniciada.");
-        setRecordingState(true); 
+        setRecordingState(true); // Confirma que a gravação está ativa
         
+        // Para a gravação se o usuário parar o compartilhamento pelo navegador
         originalStream.getVideoTracks()[0].onended = () => {
             console.log("Compartilhamento de tela encerrado pelo usuário.");
             stopRecordingAndDownload();
@@ -181,6 +186,7 @@ export async function startRecording() {
     } catch (error) {
         console.error("Erro detalhado ao iniciar a gravação:", error);
         
+        // CORREÇÃO: Verifica se originalStream é null antes de tentar ler 'message'
         let errorMessage = error.message || "Erro desconhecido.";
         if (error.name === 'NotAllowedError') {
              errorMessage = "Permissão negada para gravação de tela e/ou áudio. Verifique as permissões do navegador.";
@@ -207,12 +213,13 @@ export function stopRecordingAndDownload() {
     
     if (mediaRecorder && mediaRecorder.state === "recording") {
         console.log("Parando MediaRecorder...");
-        mediaRecorder.stop(); 
+        mediaRecorder.stop(); // O onstop cuida do download e limpeza final
     } else {
          console.log("MediaRecorder não está gravando ou já foi parado.");
-         forceStopRecording(); 
-         setRecordingState(false); 
+         forceStopRecording(); // Garante a limpeza se não estava gravando
+         setRecordingState(false); // Reseta o estado
     }
+     // Garante que a flag de gravação seja desativada
     setRecordingState(false);
 }
 
@@ -221,12 +228,14 @@ export function forceStopRecording() {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
 
+    // Para faixas do stream original (tela e áudio da tela)
     if (originalStream) {
         originalStream.getTracks().forEach(track => track.stop());
         originalStream = null;
         console.log("Stream original parado.");
     }
     
+    // Para vídeo oculto
     if (hiddenVideo) {
         hiddenVideo.pause();
         hiddenVideo.srcObject = null;
@@ -234,7 +243,9 @@ export function forceStopRecording() {
         console.log("Vídeo oculto parado e liberado.");
     }
 
+    // Para o MediaRecorder
     if (mediaRecorder) {
+        // Remove listeners primeiro
         mediaRecorder.ondataavailable = null; 
         mediaRecorder.onstop = null;
         if(mediaRecorder.state === "recording") {
@@ -249,7 +260,6 @@ export function forceStopRecording() {
     }
     
     recordedChunks = [];
-    setRecordingState(false); 
+    setRecordingState(false); // Garante que o estado seja resetado
     console.log("Recursos de gravação limpos.");
 }
-

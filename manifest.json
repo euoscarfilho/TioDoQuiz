@@ -1,32 +1,32 @@
 {
   "name": "Tio do Quiz",
   "short_name": "Tio do Quiz",
-  "start_url": ".",
+  "start_url": "/",
   "display": "fullscreen",
   "background_color": "#111827",
   "theme_color": "#1e40af",
   "description": "Gerador de Quizzes com IA para criar vídeos para o TikTok.",
   "icons": [
     {
-      "src": "files/icon-192.png",
+      "src": "/files/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "files/icon-512.png",
+      "src": "/files/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
   "screenshots": [
     {
-      "src": "files/screenshot-mobile.png",
+      "src": "/files/screenshot-mobile.png",
       "sizes": "450x800",
       "type": "image/png",
       "label": "Tela do Quiz no Celular"
     },
     {
-      "src": "files/screenshot-desktop.png",
+      "src": "/files/screenshot-desktop.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",

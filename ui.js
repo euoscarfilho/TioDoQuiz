@@ -1,208 +1,91 @@
 import * as C from './constants.js';
-import { loadAndRenderRecentThemes, isRecording, settings, supabase } from './state.js';
-import { forceStopRecording, stopRecordingAndDownload } from './recording.js'; 
+import { loadAndRenderRecentThemes, isRecording } from './state.js';
+import { forceStopRecording, stopRecordingAndDownload } from './recording.js'; // Importa funções de gravação
 
 // --- LÓGICA DE NAVEGAÇÃO E INICIALIZAÇÃO ---
 
-// Função auxiliar para tocar um áudio e esperar ele terminar
-function playAudioAndWait(audioUrl) {
-    return new Promise((resolve) => {
-        if (!audioUrl) {
-            console.warn("URL de áudio vazia, pulando.");
-            resolve();
-            return;
-        }
-        const audio = new Audio(audioUrl);
-        audio.play().catch(e => {
-            console.error("Erro ao tocar áudio:", e);
-            resolve(); 
-        });
-        audio.onended = resolve;
-        audio.onerror = (e) => {
-             console.error("Erro no elemento de áudio:", e);
-             resolve(); 
-        };
-    });
-}
-
-// Nova função para atualizar a mensagem de boas-vindas
-export function updateWelcomeMessage(email) {
-    if (email) {
-        C.welcomeMessage.textContent = `Bem-vindo, ${email.split('@')[0]}!`;
-    } else {
-        C.welcomeMessage.textContent = "Pronto para o desafio?";
-    }
-}
-
-
 export function showScreen(screenName) {
     console.log("Mostrando tela:", screenName);
-    const allOverlays = [C.lobbyModal, C.personalizationModal, C.finalizationModal, C.preGameModal, C.loginModal];
+    const allOverlays = [C.lobbyModal, C.personalizationModal, C.finalizationModal, C.preGameModal];
     allOverlays.forEach(screen => screen.classList.add('hidden'));
 
     C.mainContent.classList.add('hidden');
     C.userHeader.classList.add('hidden');
-    C.externalControls.classList.add('hidden'); 
-    C.downloadContainer.innerHTML = '';
-    clearTimeout(C.downloadTimeoutId); 
+    C.externalControls.classList.add('hidden'); // Esconde por padrão
+    C.downloadContainer.innerHTML = ''; // Limpa download link
+    clearTimeout(C.downloadTimeoutId); // Cancela timeout anterior
 
     if (!C.backgroundVideo.paused) C.backgroundVideo.pause();
     if (!C.headerBackgroundVideo.paused) C.headerBackgroundVideo.pause();
 
-    if (screenName !== 'lobby' && screenName !== 'login' && history.state?.screen !== screenName) {
+    // Só atualiza o hash se não for lobby (para evitar histórico sujo)
+     if (screenName !== 'lobby' && history.state?.screen !== screenName) {
         history.pushState({ screen: screenName }, ``, `#${screenName}`);
     } else if (screenName === 'lobby') {
-         history.replaceState({ screen: 'lobby'}, ``, ' '); 
-    } else if (screenName === 'login') {
-         history.replaceState({ screen: 'login'}, ``, ' '); 
+         history.replaceState({ screen: 'lobby'}, ``, ' '); // Limpa hash no lobby
     }
+
 
     // Lógica para telas que mostram o vídeo de fundo
     if (['quiz', 'finalization', 'pre-game'].includes(screenName)) {
-        C.backgroundVideo.src = C.DEFAULT_VIDEO_URL;
+        C.backgroundVideo.src = C.DEFAULT_VIDEO_URL; // Garante que a fonte está definida
         C.backgroundVideo.classList.remove('hidden');
         C.backgroundVideo.play().catch(e => console.error("Erro ao tocar vídeo de fundo:", e));
     } else {
-        C.backgroundVideo.classList.add('hidden');
+        C.backgroundVideo.classList.add('hidden'); // Esconde explicitamente
     }
 
     // Mostra a tela correta e seus elementos companheiros
     if (screenName === 'lobby') {
         C.lobbyModal.classList.remove('hidden');
-        loadAndRenderRecentThemes(showScreen); 
-        forceStopRecording();
+        loadAndRenderRecentThemes(showScreen); // Passa o callback
+        forceStopRecording(); // Garante que qualquer gravação seja parada ao voltar ao lobby
     } else if (screenName === 'personalization') {
         C.personalizationModal.classList.remove('hidden');
-        loadKeysIntoList(); // Carrega a lista de chaves ao abrir
     } else if (screenName === 'quiz') {
         C.mainContent.classList.remove('hidden');
         C.userHeader.classList.remove('hidden');
         
         if (isRecording) {
             C.externalControls.classList.remove('hidden');
-            C.stopRecordBtn.classList.remove('hidden'); 
+            // C.stopRecordBtn.classList.remove('hidden'); // Esta linha foi removida
             C.downloadContainer.innerHTML = ''; 
         }
 
         if (C.headerBackgroundVideo.src) {
             C.headerBackgroundVideo.classList.remove('hidden');
-            C.headerBackgroundVideo.currentTime = C.backgroundVideo.currentTime; 
+            C.headerBackgroundVideo.currentTime = C.backgroundVideo.currentTime; // Sincroniza
             C.headerBackgroundVideo.play().catch(e => console.error("Erro ao tocar vídeo do header:", e));
         }
     } else if (screenName === 'finalization') {
         C.finalizationModal.classList.remove('hidden');
-        
-        const startFinalSequence = async () => {
+
+        C.soundFinal.currentTime = 0;
+        C.soundFinal.play().catch(e => console.warn("Não foi possível tocar o som final:", e));
+
+        if (isRecording) {
+            C.downloadContainer.innerHTML = ''; 
+            C.externalControls.classList.remove('hidden'); 
             
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            if (settings.generatedAudioMap && settings.generatedAudioMap['cta_final']) {
-                await playAudioAndWait(settings.generatedAudioMap['cta_final']);
-            }
-            
-            if (isRecording) {
-                C.downloadContainer.innerHTML = ''; 
-                C.externalControls.classList.remove('hidden'); 
-                C.stopRecordBtn.classList.add('hidden'); 
+            C.downloadTimeoutId = setTimeout(() => {
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = 'Parar e Salvar';
+                saveBtn.className = 'external-button bg-green-600 hover:bg-green-700';
+                saveBtn.onclick = stopRecordingAndDownload; 
                 
-                C.downloadTimeoutId = setTimeout(() => {
-                    const saveBtn = document.createElement('button');
-                    saveBtn.textContent = 'Parar e Salvar Gravação';
-                    saveBtn.className = 'external-button bg-green-600 hover:bg-green-700';
-                    saveBtn.onclick = stopRecordingAndDownload; 
-                    
-                    C.downloadContainer.appendChild(saveBtn);
-                }, 5000); // 5 segundos
-            }
-        };
-        
-        startFinalSequence();
+                C.downloadContainer.appendChild(saveBtn);
+            }, 10000); // AJUSTE: Aumentado para 10 segundos
+        }
 
     } else if (screenName === 'pre-game') {
         C.preGameModal.classList.remove('hidden');
-    } else if (screenName === 'login') {
-        C.loginModal.classList.remove('hidden');
     }
 }
 
 
 export function handleBackButton(event) {
-    // Se o usuário está logado, volta para o lobby. Se não, volta para o login.
-    if (sessionStorage.getItem('tioDoQuizAutenticado') === 'true') {
-        showScreen('lobby');
-    } else {
-        showScreen('login');
-    }
+    // Se o estado do histórico existe e tem a tela, usa ele, senão volta pro lobby
+    const targetScreen = event.state?.screen || 'lobby';
+    showScreen(targetScreen);
 }
 
-// Nova função para carregar as chaves salvas na lista
-export async function loadKeysIntoList() {
-    C.keysListContainer.innerHTML = `<p class="text-blue-300">Carregando chaves...</p>`;
-    try {
-        // CORREÇÃO: Busca todas as colunas para evitar o erro 42703
-        const { data: keys, error } = await supabase
-            .from('elevenlabs_keys')
-            .select('*');
-
-        if (error) {
-            if (error.status === 401) {
-                 C.keysListContainer.innerHTML = `<p class="text-red-400">Sessão expirada. Faça o login novamente.</p>`;
-                 return;
-            }
-             // Captura e exibe o erro exato
-            C.keysListContainer.innerHTML = `<p class="text-red-400">Erro ao buscar: ${error.message}</p>`;
-            throw error;
-        }
-        
-        if (keys.length === 0) {
-            C.keysListContainer.innerHTML = `<p class="text-blue-300">Nenhuma chave salva.</p>`;
-            return;
-        }
-
-        C.keysListContainer.innerHTML = ''; // Limpa a lista
-        keys.forEach(key => {
-            // Usa 'id' se existir, ou 'created_at' como fallback para o botão Excluir
-            const identifier = key.id || key.created_at; 
-
-            const keyEl = document.createElement('div');
-            keyEl.className = "flex justify-between items-center bg-blue-800 p-2 rounded";
-            keyEl.innerHTML = `<span>${key.nome_da_chave} (Adicionada em: ${new Date(key.created_at).toLocaleDateString()})</span>
-                             <button data-id="${identifier}" class="delete-key-btn bg-red-600 text-white px-2 py-1 rounded text-sm">Excluir</button>`;
-            C.keysListContainer.appendChild(keyEl);
-        });
-
-        // Adiciona event listeners aos novos botões de deletar
-        document.querySelectorAll('.delete-key-btn').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const id = e.target.getAttribute('data-id');
-                if (confirm("Tem certeza que deseja excluir esta chave?")) {
-                    await handleDeleteKeyClick(id);
-                }
-            });
-        });
-    } catch (error) {
-         console.error("Erro ao buscar chaves:", error);
-         C.keysListContainer.innerHTML = `<p class="text-red-400">Erro ao buscar chaves.</p>`;
-    }
-}
-
-// Função para deletar a chave
-async function handleDeleteKeyClick(id) {
-    try {
-        // CORREÇÃO: Usar o delete() para excluir a linha
-        const { error } = await supabase
-            .from('elevenlabs_keys')
-            .delete()
-            .match({ id: id }); // Assume que 'id' é a chave primária
-
-        if (error) {
-            throw error;
-        }
-        
-        console.log("Chave excluída:", id);
-        loadKeysIntoList(); // Recarrega a lista
-    } catch (error) {
-        console.error("Erro ao excluir chave:", error);
-        alert("Erro ao excluir chave.");
-    }
-}

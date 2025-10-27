@@ -1,42 +1,22 @@
-import * as C from './constants.js';
-
 // --- ESTADO DA APLICAÇÃO E CONFIGURAÇÕES ---
 export let settings = {};
 export let isRecording = false; // Flag para controlar o estado da gravação
 
-// --- CLIENTE SUPABASE ---
-export const supabase = C.supabaseClient;
-
 export function setRecordingState(value) {
-    console.log("Estado de gravação alterado para:", value);
     isRecording = value;
-}
-
-// Verifica se o usuário está logado
-export async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-        return session.user;
-    }
-    return null;
 }
 
 export function saveSettings() {
     const generatedQuiz = settings.generatedQuiz;
     const generatedScript = settings.generatedScript;
-    const generatedAudioMap = settings.generatedAudioMap;
 
     settings = {
-        theme: C.themeInput.value.trim(),
-        numQuestions: C.questionCountInput.value,
-        numAnswers: C.answerCountInput.value,
-        difficulty: C.difficultyInput.value,
+        theme: document.getElementById('quiz-theme-input').value.trim(),
+        numQuestions: document.getElementById('question-count-input').value,
+        numAnswers: document.getElementById('answer-count-input').value,
+        difficulty: document.getElementById('difficulty-input').value,
         generatedQuiz: generatedQuiz,
         generatedScript: generatedScript,
-        generatedAudioMap: generatedAudioMap,
-        
-        // Salva a URL da Função Supabase no localStorage
-        supabaseFunctionUrl: C.supabaseUrlInput.value.trim()
     };
     localStorage.setItem('tioDoQuizSettings', JSON.stringify(settings));
     updateUIFromSettings();
@@ -46,11 +26,6 @@ export function loadSettings() {
     const savedSettings = localStorage.getItem('tioDoQuizSettings');
     if (savedSettings) {
         settings = JSON.parse(savedSettings);
-        // Garante que os dados de áudio (que não são salvos) sejam resetados
-        settings.generatedQuiz = null;
-        settings.generatedScript = null;
-        settings.generatedAudioMap = null;
-        
     } else {
         settings = {
             theme: '',
@@ -59,27 +34,22 @@ export function loadSettings() {
             difficulty: 'Médio',
             generatedQuiz: null,
             generatedScript: null,
-            generatedAudioMap: null,
-            supabaseFunctionUrl: '' // Novo estado
         };
     }
     updateUIFromSettings();
 }
 
 export function updateUIFromSettings() {
-    C.themeInput.value = settings.theme || '';
-    C.questionCountInput.value = settings.numQuestions || '5';
-    C.questionCountValue.textContent = settings.numQuestions || '5';
-    C.answerCountInput.value = settings.numAnswers || '3';
-    C.answerCountValue.textContent = settings.numAnswers || '3';
-    C.difficultyInput.value = settings.difficulty || 'Médio';
+    document.getElementById('quiz-theme-input').value = settings.theme;
+    document.getElementById('question-count-input').value = settings.numQuestions;
+    document.getElementById('question-count-value').textContent = settings.numQuestions;
+    document.getElementById('answer-count-input').value = settings.numAnswers;
+    document.getElementById('answer-count-value').textContent = settings.numAnswers;
+    document.getElementById('difficulty-input').value = settings.difficulty;
 
-    // Carrega a URL da função salva no campo de personalização
-    C.supabaseUrlInput.value = settings.supabaseFunctionUrl || '';
-
-    C.userLogo.src = C.DEFAULT_LOGO_URL;
-    C.userLogo.onerror = () => { C.userLogo.src = 'https://placehold.co/200x200/f59e0b/1e3a8a?text=Erro'; };
-    C.userLogo.style.height = `${C.DEFAULT_LOGO_SIZE}px`;
+    document.getElementById('user-logo').src = './files/logo.png';
+    document.getElementById('user-logo').onerror = () => { document.getElementById('user-logo').src = 'https://placehold.co/200x200/f59e0b/1e3a8a?text=Erro'; };
+    document.getElementById('user-logo').style.height = '200px'; // Tamanho Padrão
 }
 
 // --- LÓGICA DE TEMAS RECENTES ---
@@ -92,6 +62,7 @@ export function saveRecentTheme(theme) {
     localStorage.setItem('tioDoQuizRecentThemes', JSON.stringify(recentThemes));
 }
 
+// CORREÇÃO: A função agora aceita um callback para o clique
 export function loadAndRenderRecentThemes(onThemeClickCallback) {
     const recentThemes = JSON.parse(localStorage.getItem('tioDoQuizRecentThemes')) || [];
     const recentThemesContainer = document.getElementById('recent-themes-container');
@@ -106,6 +77,7 @@ export function loadAndRenderRecentThemes(onThemeClickCallback) {
         themeBtn.textContent = theme;
         themeBtn.onclick = () => {
             document.getElementById('quiz-theme-input').value = theme;
+            // Executa o callback (que é a função 'showScreen')
             if (onThemeClickCallback) {
                 onThemeClickCallback('personalization');
             }
@@ -113,3 +85,4 @@ export function loadAndRenderRecentThemes(onThemeClickCallback) {
         recentThemesContainer.appendChild(themeBtn);
     });
 }
+
