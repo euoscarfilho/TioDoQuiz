@@ -7,8 +7,10 @@ export function setRecordingState(value) {
 }
 
 export function saveSettings() {
+    // Preserva dados de runtime que não estão no DOM
     const generatedQuiz = settings.generatedQuiz;
     const generatedScript = settings.generatedScript;
+    const generatedAudio = settings.generatedAudio; // <-- ADICIONADO
 
     settings = {
         theme: document.getElementById('quiz-theme-input').value.trim(),
@@ -17,8 +19,15 @@ export function saveSettings() {
         difficulty: document.getElementById('difficulty-input').value,
         generatedQuiz: generatedQuiz,
         generatedScript: generatedScript,
+        generatedAudio: generatedAudio, // <-- ADICIONADO (para runtime)
     };
-    localStorage.setItem('tioDoQuizSettings', JSON.stringify(settings));
+    
+    // Cria uma cópia segura para salvar no localStorage
+    // (Remove dados não-serializáveis como Blob URLs)
+    const settingsToSave = { ...settings };
+    settingsToSave.generatedAudio = null; // <-- ADICIONADO: Não salvar blobs
+    
+    localStorage.setItem('tioDoQuizSettings', JSON.stringify(settingsToSave));
     updateUIFromSettings();
 }
 
@@ -26,6 +35,8 @@ export function loadSettings() {
     const savedSettings = localStorage.getItem('tioDoQuizSettings');
     if (savedSettings) {
         settings = JSON.parse(savedSettings);
+        // Garante que a propriedade de runtime exista
+        settings.generatedAudio = null; // <-- ADICIONADO
     } else {
         settings = {
             theme: '',
@@ -34,6 +45,7 @@ export function loadSettings() {
             difficulty: 'Médio',
             generatedQuiz: null,
             generatedScript: null,
+            generatedAudio: null, // <-- ADICIONADO
         };
     }
     updateUIFromSettings();
@@ -85,4 +97,3 @@ export function loadAndRenderRecentThemes(onThemeClickCallback) {
         recentThemesContainer.appendChild(themeBtn);
     });
 }
-

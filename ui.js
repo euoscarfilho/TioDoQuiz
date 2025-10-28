@@ -1,11 +1,40 @@
 import * as C from './constants.js';
-import { loadAndRenderRecentThemes, isRecording } from './state.js';
-import { forceStopRecording, stopRecordingAndDownload } from './recording.js'; // Importa funções de gravação
+// ATUALIZAÇÃO: Importa 'settings' para liberar os blobs
+import { loadAndRenderRecentThemes, isRecording, settings } from './state.js'; 
+import { forceStopRecording, stopRecordingAndDownload } from './recording.js'; 
+import { stopCurrentAudio } from './game.js'; 
+
+// --- ATUALIZAÇÃO: Função agora EXPORTADA ---
+/**
+ * Itera sobre os blobs de áudio armazenados em 'settings'
+ * e os revoga da memória para evitar memory leaks.
+ */
+export function releaseAudioBlobs() {
+    if (settings.generatedAudio) {
+        console.log("Liberando blobs de áudio da memória...");
+        try {
+            Object.values(settings.generatedAudio).forEach(url => {
+                URL.revokeObjectURL(url);
+            });
+        } catch (e) {
+            console.warn("Erro ao liberar blobs de áudio:", e);
+        }
+        // Limpa a referência no estado
+        settings.generatedAudio = null;
+    }
+}
+
 
 // --- LÓGICA DE NAVEGAÇÃO E INICIALIZAÇÃO ---
 
 export function showScreen(screenName) {
     console.log("Mostrando tela:", screenName);
+    
+    // Interrompe o áudio APENAS no lobby ou personalização.
+    if (screenName === 'lobby' || screenName === 'personalization') {
+        stopCurrentAudio();
+    }
+    
     const allOverlays = [C.lobbyModal, C.personalizationModal, C.finalizationModal, C.preGameModal];
     allOverlays.forEach(screen => screen.classList.add('hidden'));
 
@@ -40,6 +69,9 @@ export function showScreen(screenName) {
         C.lobbyModal.classList.remove('hidden');
         loadAndRenderRecentThemes(showScreen); // Passa o callback
         forceStopRecording(); // Garante que qualquer gravação seja parada ao voltar ao lobby
+        stopCurrentAudio(); // Garante parada do áudio
+        // --- CORREÇÃO DO BUG: Chamada removida daqui ---
+        // releaseAudioBlobs(); 
     } else if (screenName === 'personalization') {
         C.personalizationModal.classList.remove('hidden');
     } else if (screenName === 'quiz') {
@@ -48,7 +80,6 @@ export function showScreen(screenName) {
         
         if (isRecording) {
             C.externalControls.classList.remove('hidden');
-            // C.stopRecordBtn.classList.remove('hidden'); // Esta linha foi removida
             C.downloadContainer.innerHTML = ''; 
         }
 
@@ -64,17 +95,9 @@ export function showScreen(screenName) {
         C.soundFinal.play().catch(e => console.warn("Não foi possível tocar o som final:", e));
 
         if (isRecording) {
-            C.downloadContainer.innerHTML = ''; 
             C.externalControls.classList.remove('hidden'); 
-            
-            C.downloadTimeoutId = setTimeout(() => {
-                const saveBtn = document.createElement('button');
-                saveBtn.textContent = 'Parar e Salvar';
-                saveBtn.className = 'external-button bg-green-600 hover:bg-green-700';
-                saveBtn.onclick = stopRecordingAndDownload; 
-                
-                C.downloadContainer.appendChild(saveBtn);
-            }, 10000); // AJUSTE: Aumentado para 10 segundos
+            C.downloadContainer.innerHTML = ''; 
+            // O botão de salvar agora é chamado pelo game.js
         }
 
     } else if (screenName === 'pre-game') {
@@ -82,10 +105,28 @@ export function showScreen(screenName) {
     }
 }
 
+/**
+ * Mostra o botão "Parar e Salvar" na tela.
+ */
+export function showSaveButton() {
+    if (!isRecording) return; // Não mostra se não estava gravando
+
+    C.downloadContainer.innerHTML = ''; // Limpa por via das dúvidas
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Parar e Salvar';
+    saveBtn.className = 'external-button bg-green-600 hover:bg-green-700';
+    saveBtn.onclick = stopRecordingAndDownload; 
+    
+    C.downloadContainer.appendChild(saveBtn);
+}
+
 
 export function handleBackButton(event) {
     // Se o estado do histórico existe e tem a tela, usa ele, senão volta pro lobby
     const targetScreen = event.state?.screen || 'lobby';
+    
+    // Garante parada do áudio ao voltar
+    stopCurrentAudio(); 
+    
     showScreen(targetScreen);
 }
-
