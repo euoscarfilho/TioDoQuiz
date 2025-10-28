@@ -5,58 +5,59 @@ import { releaseAudioBlobs } from './ui.js';
 
 // --- LÓGICA DE GERAÇÃO DE CONTEÚDO E ROTEIRO ---
 
-// Chave da API Gemini (ATENÇÃO: Exposta no front-end)
-const GEMINI_API_KEY = "AIzaSyDARpDwQ918DzKAtd374ab_yxa2N8akaZ0"; //
+// 
 
 /**
- * (Função interna) Gera áudio a partir de um texto usando a API do ElevenLabs.
+ * (Função interna) Gera áudio a partir de um texto chamando nosso proxy seguro.
  * @param {string} scriptText O texto para converter em áudio.
  * @returns {Promise<string>} A URL local (Blob URL) do áudio gerado.
  */
 async function generateAudioFromScript(scriptText) {
-    console.log("Gerando áudio para o texto:", scriptText);
+    console.log("Chamando proxy de áudio para:", scriptText);
 
-    // --- ⬇️⬇️ SUBSTITUA PELOS SEUS DADOS ⬇️⬇️ ---
-    const XI_API_KEY = "sk_36bb3fcd3d5c2a5f35fc05d3f2ffd0d486008b902c3e629e";
-    const XI_VOICE_ID = "NOpBlnGInO9m6vDvFkFC"; 
-    // --- ⬆️⬆️ SUBSTITUA PELOS SEUS DADOS ⬆️⬆️ ---
+   
     
     const cleanedText = scriptText.replace(/(\r\n|\n|\r)/gm, " ").trim();
-    const apiUrl = `https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE_ID}/stream`;
+    
+    // --- ATUALIZAÇÃO: Chama nosso próprio servidor ---
+    const apiUrl = '/api/generateAudio'; //
 
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Accept': 'audio/mpeg',
+                // Removemos 'Accept' e 'xi-api-key'
                 'Content-Type': 'application/json',
-                'xi-api-key': XI_API_KEY
             },
+            // Enviamos apenas o texto, o servidor cuida do resto
             body: JSON.stringify({
-                "text": cleanedText,
-                "model_id": "eleven_multilingual_v2",
-                "voice_settings": { "stability": 0.5, "similarity_boost": 0.75, "style": 0.3, "use_speaker_boost": true }
+                "text": cleanedText 
             })
         });
 
         if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`Erro da API ElevenLabs: ${response.status} - ${errorBody}`);
+            // Se o proxy falhar, ele envia um JSON de erro
+            const errorBody = await response.json();
+            throw new Error(`Erro do proxy de áudio: ${response.status} - ${errorBody.error}`);
         }
 
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // O proxy envia o áudio (audio/mpeg)
+        const audioBlob = await response.blob(); //
+        const audioUrl = URL.createObjectURL(audioBlob); //
         
-        console.log("Áudio gerado (Blob URL):", audioUrl);
+        console.log("Áudio recebido do proxy (Blob URL):", audioUrl);
         return audioUrl;
 
     } catch (error) {
-        console.error("Falha ao gerar áudio do ElevenLabs:", error);
+        console.error("Falha ao gerar áudio (via proxy):", error);
         throw error;
     }
 }
 
 
+/**
+ * Busca o quiz e o roteiro do nosso proxy seguro.
+ */
 export async function generateQuizAndScriptFromTheme() {
     const config = {
         theme: C.themeInput.value.trim(),
@@ -64,61 +65,35 @@ export async function generateQuizAndScriptFromTheme() {
         numAnswers: C.answerCountInput.value,
         difficulty: C.difficultyInput.value
     };
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`;
     
-    const systemPrompt = `Você é o "Tio do Quiz", um especialista em criar conteúdo viral para o TikTok. Sua tarefa é gerar um quiz em formato JSON e um roteiro de narração. O roteiro deve ser EXTREMAMENTE objetivo, lendo apenas a pergunta, as alternativas e a resposta correta, sem explicações. Responda estritamente no formato JSON especificado, sem markdown.`;
+    // --- ATUALIZAÇÃO: Chama nosso próprio servidor ---
+    const apiUrl = '/api/generateQuiz'; //
     
-    const userQuery = `Gere um quiz e um roteiro para o TikTok (vídeo de 1 minuto).
-    Tema: "${config.theme}"
-    Dificuldade: "${config.difficulty}"
-    Número de Perguntas: ${config.numQuestions}
-    Número de Alternativas por Pergunta: ${config.numAnswers}
+    // 🚨🚨🚨 LÓGICA DE PROMPT E PAYLOAD REMOVIDA 🚨🚨🚨
+    // Todo o systemPrompt, userQuery e payload
+    // agora vivem no servidor.
 
-    O roteiro (script) deve ser a narração EXATA do quiz, pronto para text-to-speech.
-    O roteiro deve seguir o formato:
-    "Pergunta 1: [Texto da Pergunta]. Alternativa A: [Texto]. Alternativa B: [Texto]. Alternativa C: [Texto]. Resposta correta: [Letra], [Texto da Resposta].
-    Pergunta 2: [Texto da Pergunta]. ..."
+    const response = await fetch(apiUrl, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        // 2. Envia apenas a configuração
+        body: JSON.stringify(config) 
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(`Erro do proxy do quiz: ${response.status} - ${errorBody.error}`);
+    }
     
-    Seja direto e rápido, sem explicações extras nas respostas.`;
-
-    const payload = {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: userQuery }] }],
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: "OBJECT",
-                properties: {
-                    "quiz": {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                "question": { "type": "STRING" },
-                                "answers": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "text": { "type": "STRING" } } } },
-                                "correctIndex": { "type": "NUMBER" }
-                            },
-                            required: ["question", "answers", "correctIndex"]
-                        }
-                    },
-                    "script": { "type": "STRING" } 
-                },
-                required: ["quiz", "script"]
-            }
-        }
-    };
-
-    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (!response.ok) throw new Error(`Erro de rede da API: ${response.status} ${response.statusText}`);
+    // 3. A resposta já vem no formato JSON final
     const result = await response.json();
-    if (!result.candidates || result.candidates.length === 0) throw new Error("A IA não retornou um resultado. O tema pode ter sido bloqueado.");
-    const part = result.candidates[0]?.content?.parts?.[0];
-    if (!part || !part.text) throw new Error("A IA retornou uma resposta em um formato inesperado.");
-    return JSON.parse(part.text);
+    return result; 
 }
 
 
 // --- ATUALIZAÇÃO (Refatoração de Áudio) ---
+// Esta função NÃO PRECISA DE MUDANÇAS, pois ela
+// apenas chama as duas funções acima, que já foram modificadas.
 export async function handleGenerateContentClick() {
     const theme = C.themeInput.value.trim();
     if (!theme) {
@@ -130,15 +105,14 @@ export async function handleGenerateContentClick() {
     C.generateContentBtn.textContent = "Limpando áudios...";
     C.generationOutput.classList.add('hidden');
     
-    // --- CORREÇÃO DO BUG: Limpa os áudios antigos PRIMEIRO ---
+    // Limpa os áudios antigos PRIMEIRO
     releaseAudioBlobs();
     settings.generatedAudio = null;
-    // ----------------------------------------------------
 
     C.generateContentBtn.textContent = "Gerando Quiz...";
 
     try {
-        // 1. Gera o Quiz (JSON) e o Roteiro (para .txt)
+        // 1. Gera o Quiz (JSON) e o Roteiro (via proxy)
         const result = await generateQuizAndScriptFromTheme();
         settings.generatedQuiz = result.quiz;
         settings.generatedScript = result.script;
@@ -156,7 +130,7 @@ export async function handleGenerateContentClick() {
         
         audioTexts.push({ key: 'outro', text: "E ai? Comenta quantas acertou e não esquece de dar like e desafiar os amigos. Até a próxima!" });
 
-        // 3. Gera os áudios em sequência
+        // 3. Gera os áudios em sequência (via proxy)
         const generatedAudioBlobs = {};
         let count = 1;
         const total = audioTexts.length;
@@ -164,7 +138,8 @@ export async function handleGenerateContentClick() {
         for (const item of audioTexts) {
             C.generateContentBtn.textContent = `Gerando áudio (${count}/${total})...`;
             try {
-                const audioUrl = await generateAudioFromScript(item.text);
+                // Esta chamada agora usa o proxy
+                const audioUrl = await generateAudioFromScript(item.text); 
                 generatedAudioBlobs[item.key] = audioUrl;
             } catch (audioError) {
                 throw new Error(`Falha ao gerar áudio para "${item.text.substring(0, 20)}...": ${audioError.message}`);
